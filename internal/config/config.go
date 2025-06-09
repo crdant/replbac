@@ -159,7 +159,10 @@ func loadFromEnv() models.Config {
 	if val := os.Getenv("REPLBAC_API_ENDPOINT"); val != "" {
 		config.APIEndpoint = val
 	}
-	if val := os.Getenv("REPLBAC_API_TOKEN"); val != "" {
+	// Check REPLICATED_API_TOKEN first (for compatibility with replicated CLI)
+	if val := os.Getenv("REPLICATED_API_TOKEN"); val != "" {
+		config.APIToken = val
+	} else if val := os.Getenv("REPLBAC_API_TOKEN"); val != "" {
 		config.APIToken = val
 	}
 	if val := os.Getenv("REPLBAC_LOG_LEVEL"); val != "" {

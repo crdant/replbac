@@ -75,6 +75,33 @@ confirm: true`,
 			},
 		},
 		{
+			name: "REPLICATED_API_TOKEN takes precedence over REPLBAC_API_TOKEN",
+			envVars: map[string]string{
+				"REPLICATED_API_TOKEN": "replicated-token",
+				"REPLBAC_API_TOKEN":    "replbac-token",
+				"REPLBAC_API_ENDPOINT": "https://test.api.com",
+			},
+			expectedConfig: models.Config{
+				APIEndpoint: "https://test.api.com",
+				APIToken:    "replicated-token",
+				LogLevel:    "info",
+				Confirm:     false,
+			},
+		},
+		{
+			name: "REPLBAC_API_TOKEN used when REPLICATED_API_TOKEN not set",
+			envVars: map[string]string{
+				"REPLBAC_API_TOKEN":    "replbac-token",
+				"REPLBAC_API_ENDPOINT": "https://test.api.com",
+			},
+			expectedConfig: models.Config{
+				APIEndpoint: "https://test.api.com",
+				APIToken:    "replbac-token",
+				LogLevel:    "info",
+				Confirm:     false,
+			},
+		},
+		{
 			name:       "invalid YAML returns error",
 			configFile: "config.yaml",
 			configContent: `api_endpoint: https://yaml.api.com
@@ -359,6 +386,7 @@ func cleanupEnv() {
 	envVars := []string{
 		"REPLBAC_API_ENDPOINT",
 		"REPLBAC_API_TOKEN",
+		"REPLICATED_API_TOKEN",
 		"REPLBAC_LOG_LEVEL",
 		"REPLBAC_CONFIRM",
 		"REPLBAC_CONFIG",
