@@ -369,13 +369,11 @@ func TestValidateRoleFile(t *testing.T) {
 			errorMsg:    "role name is required",
 		},
 		{
-			name: "no resources",
+			name: "no resources allowed",
 			role: models.Role{
 				Name:      "test",
 				Resources: models.Resources{},
 			},
-			expectError: true,
-			errorMsg:    "role must have at least one allowed resource",
 		},
 		{
 			name: "empty allowed resources",
@@ -386,8 +384,6 @@ func TestValidateRoleFile(t *testing.T) {
 					Denied:  []string{"something"},
 				},
 			},
-			expectError: true,
-			errorMsg:    "role must have at least one allowed resource",
 		},
 	}
 
