@@ -12,8 +12,8 @@
 #### Step 1: Project Setup and Core Data Structures
 - [x] Initialize Go project with proper module structure
 - [x] Create golang-standards/project-layout directory structure
-- [ ] Define core data structures (Role, APIRole, Config)
-- [ ] Write and implement unit tests for data structures
+- [x] Define core data structures (Role, APIRole, Config)
+- [x] Write and implement unit tests for data structures
 - [x] Set up basic Makefile and .gitignore
 
 #### Step 2: Configuration Management
