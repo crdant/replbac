@@ -281,12 +281,87 @@ log_level: debug`
 	}
 }
 
+func TestLoadConfigWithEnvironmentConfigPath(t *testing.T) {
+	// Clean up environment
+	defer cleanupEnv()
+	
+	// Create a temporary config file
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "custom-config.yaml")
+	configContent := `api_endpoint: https://custom.api.com
+api_token: custom-token
+log_level: warn`
+	
+	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+		t.Fatalf("Failed to create config file: %v", err)
+	}
+	
+	// Set REPLBAC_CONFIG environment variable
+	os.Setenv("REPLBAC_CONFIG", configPath)
+	
+	// Test LoadConfigWithDefaults - it should use REPLBAC_CONFIG path
+	config, err := LoadConfigWithDefaults(nil)
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+		return
+	}
+	
+	if config.APIEndpoint != "https://custom.api.com" {
+		t.Errorf("APIEndpoint = %v, want %v", config.APIEndpoint, "https://custom.api.com")
+	}
+	if config.APIToken != "custom-token" {
+		t.Errorf("APIToken = %v, want %v", config.APIToken, "custom-token")
+	}
+	if config.LogLevel != "warn" {
+		t.Errorf("LogLevel = %v, want %v", config.LogLevel, "warn")
+	}
+}
+
+func TestLoadConfigEnvironmentOverridesConfigFile(t *testing.T) {
+	// Clean up environment
+	defer cleanupEnv()
+	
+	// Create a temporary config file
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "test-config.yaml")
+	configContent := `api_endpoint: https://file.api.com
+api_token: file-token
+log_level: info`
+	
+	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+		t.Fatalf("Failed to create config file: %v", err)
+	}
+	
+	// Set both REPLBAC_CONFIG and override env vars
+	os.Setenv("REPLBAC_CONFIG", configPath)
+	os.Setenv("REPLBAC_API_TOKEN", "env-token")
+	os.Setenv("REPLBAC_LOG_LEVEL", "debug")
+	
+	config, err := LoadConfigWithDefaults(nil)
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+		return
+	}
+	
+	// Environment variables should override config file values
+	if config.APIEndpoint != "https://file.api.com" {
+		t.Errorf("APIEndpoint = %v, want %v", config.APIEndpoint, "https://file.api.com")
+	}
+	if config.APIToken != "env-token" {
+		t.Errorf("APIToken = %v, want %v (env should override)", config.APIToken, "env-token")
+	}
+	if config.LogLevel != "debug" {
+		t.Errorf("LogLevel = %v, want %v (env should override)", config.LogLevel, "debug")
+	}
+}
+
 func cleanupEnv() {
 	envVars := []string{
 		"REPLBAC_API_ENDPOINT",
 		"REPLBAC_API_TOKEN",
 		"REPLBAC_LOG_LEVEL",
 		"REPLBAC_CONFIRM",
+		"REPLBAC_CONFIG",
 	}
 	for _, env := range envVars {
 		os.Unsetenv(env)

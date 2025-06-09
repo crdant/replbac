@@ -96,21 +96,30 @@ func LoadConfigWithDefaults(defaultPaths []string) (models.Config, error) {
 		Confirm:     false,
 	}
 
-	// Try to load from default paths
-	if len(defaultPaths) == 0 {
-		defaultPaths = GetDefaultConfigPaths()
-	}
-	
-	for _, configPath := range defaultPaths {
-		if _, err := os.Stat(configPath); err == nil {
-			// File exists, try to load it
-			fileConfig, err := loadFromFile(configPath)
-			if err != nil {
-				// Log error but continue to next path
-				continue
+	// Check if config path is specified via environment variable
+	if configPath := os.Getenv("REPLBAC_CONFIG"); configPath != "" {
+		fileConfig, err := loadFromFile(configPath)
+		if err != nil {
+			return models.Config{}, fmt.Errorf("failed to load config from REPLBAC_CONFIG path: %w", err)
+		}
+		mergeConfigs(&config, &fileConfig)
+	} else {
+		// Try to load from default paths
+		if len(defaultPaths) == 0 {
+			defaultPaths = GetDefaultConfigPaths()
+		}
+		
+		for _, configPath := range defaultPaths {
+			if _, err := os.Stat(configPath); err == nil {
+				// File exists, try to load it
+				fileConfig, err := loadFromFile(configPath)
+				if err != nil {
+					// Log error but continue to next path
+					continue
+				}
+				mergeConfigs(&config, &fileConfig)
+				break // Use first found config file
 			}
-			mergeConfigs(&config, &fileConfig)
-			break // Use first found config file
 		}
 	}
 
