@@ -17,10 +17,10 @@
 - [x] Set up basic Makefile and .gitignore
 
 #### Step 2: Configuration Management
-- [ ] Implement configuration loading from multiple sources
-- [ ] Add support for environment variables, config files, CLI flags
-- [ ] Test configuration precedence and validation
-- [ ] Handle API token management securely
+- [x] Implement configuration loading from multiple sources
+- [x] Add support for environment variables, config files, CLI flags
+- [x] Test configuration precedence and validation
+- [x] Handle API token management securely
 
 #### Step 3: YAML File Operations
 - [ ] Implement YAML file reading and parsing
