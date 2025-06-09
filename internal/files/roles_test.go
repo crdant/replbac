@@ -25,10 +25,10 @@ func TestReadRoleFile(t *testing.T) {
 resources:
   allowed:
     - "**/*"
-    - "kots/app/*/read"
-    - "kots/app/*/write"
+    - kots/app/*/read
+    - kots/app/*/write
   denied:
-    - "kots/app/*/delete"`,
+    - kots/app/*/delete`,
 			expectedRole: models.Role{
 				Name: "admin",
 				Resources: models.Resources{
@@ -43,8 +43,8 @@ resources:
 			fileContent: `name: viewer
 resources:
   allowed:
-    - "kots/app/*/read"
-    - "team/support-issues/read"`,
+    - kots/app/*/read
+    - team/support-issues/read`,
 			expectedRole: models.Role{
 				Name: "viewer",
 				Resources: models.Resources{
@@ -65,6 +65,26 @@ resources:
 				Resources: models.Resources{
 					Allowed: []string{},
 					Denied:  []string{},
+				},
+			},
+		},
+		{
+			name:     "role with mixed quoted and unquoted strings",
+			fileName: "mixed.yaml",
+			fileContent: `name: mixed-quotes
+resources:
+  allowed:
+    - "**/*"
+    - kots/app/*/read
+    - "kots/app/*/channel/*/promote"
+    - team/support-issues/read
+  denied:
+    - kots/app/*/delete`,
+			expectedRole: models.Role{
+				Name: "mixed-quotes",
+				Resources: models.Resources{
+					Allowed: []string{"**/*", "kots/app/*/read", "kots/app/*/channel/*/promote", "team/support-issues/read"},
+					Denied:  []string{"kots/app/*/delete"},
 				},
 			},
 		},
@@ -233,15 +253,21 @@ func TestLoadRolesFromDirectory(t *testing.T) {
 	roleFiles := map[string]string{
 		"admin.yaml": `name: admin
 resources:
-  allowed: ["**/*", "kots/app/*/read"]
-  denied: ["kots/app/*/delete"]`,
+  allowed: 
+    - "**/*"
+    - kots/app/*/read
+  denied: 
+    - kots/app/*/delete`,
 		"viewer.yml": `name: viewer
 resources:
-  allowed: ["kots/app/*/read"]`,
+  allowed: 
+    - kots/app/*/read`,
 		"invalid.yaml": "name: invalid\n  bad: yaml: syntax",
 		"subdir/manager.yaml": `name: manager
 resources:
-  allowed: ["kots/app/*/write", "kots/app/*/channel/*/read"]`,
+  allowed: 
+    - kots/app/*/write
+    - kots/app/*/channel/*/read`,
 	}
 
 	for relPath, content := range roleFiles {
