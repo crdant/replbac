@@ -3,6 +3,8 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"runtime"
+	"strings"
 	"testing"
 
 	"replbac/internal/models"
@@ -55,22 +57,6 @@ confirm: true`,
 			},
 		},
 		{
-			name:       "loads from JSON config file",
-			configFile: "config.json",
-			configContent: `{
-  "api_endpoint": "https://json.api.com",
-  "api_token": "json-token",
-  "log_level": "error",
-  "confirm": false
-}`,
-			expectedConfig: models.Config{
-				APIEndpoint: "https://json.api.com",
-				APIToken:    "json-token",
-				LogLevel:    "error",
-				Confirm:     false,
-			},
-		},
-		{
 			name: "environment variables override config file",
 			envVars: map[string]string{
 				"REPLBAC_API_TOKEN": "env-token",
@@ -96,11 +82,10 @@ confirm: true`,
 			expectError: true,
 		},
 		{
-			name:       "invalid JSON returns error",
+			name:       "unsupported file format returns error",
 			configFile: "config.json",
 			configContent: `{
-  "api_endpoint": "https://json.api.com",
-  "invalid": json,
+  "api_endpoint": "https://json.api.com"
 }`,
 			expectError: true,
 		},
@@ -218,6 +203,81 @@ func TestValidateConfig(t *testing.T) {
 				t.Errorf("Unexpected error: %v", err)
 			}
 		})
+	}
+}
+
+func TestGetDefaultConfigPaths(t *testing.T) {
+	paths := GetDefaultConfigPaths()
+	
+	if len(paths) == 0 {
+		t.Error("Expected at least one default config path")
+	}
+	
+	// Check platform-specific behavior
+	switch runtime.GOOS {
+	case "darwin":
+		found := false
+		for _, path := range paths {
+			if strings.Contains(path, "Library/Preferences/com.replicated.replbac") {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Error("Expected macOS default path not found")
+		}
+	case "linux":
+		// Check for XDG or HOME fallback
+		found := false
+		for _, path := range paths {
+			if strings.Contains(path, ".config/replbac") {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Error("Expected Linux default path not found")
+		}
+	}
+	
+	// All paths should be absolute
+	for _, path := range paths {
+		if !filepath.IsAbs(path) {
+			t.Errorf("Path should be absolute: %s", path)
+		}
+	}
+}
+
+func TestLoadConfigWithDefaultPaths(t *testing.T) {
+	// Clean up environment
+	defer cleanupEnv()
+	
+	// Create a temporary config file in a known location
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "config.yaml")
+	configContent := `api_endpoint: https://test.api.com
+api_token: test-token
+log_level: debug`
+	
+	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+		t.Fatalf("Failed to create config file: %v", err)
+	}
+	
+	// Test LoadConfigWithDefaults with our test path
+	config, err := LoadConfigWithDefaults([]string{configPath})
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+		return
+	}
+	
+	if config.APIEndpoint != "https://test.api.com" {
+		t.Errorf("APIEndpoint = %v, want %v", config.APIEndpoint, "https://test.api.com")
+	}
+	if config.APIToken != "test-token" {
+		t.Errorf("APIToken = %v, want %v", config.APIToken, "test-token")
+	}
+	if config.LogLevel != "debug" {
+		t.Errorf("LogLevel = %v, want %v", config.LogLevel, "debug")
 	}
 }
 

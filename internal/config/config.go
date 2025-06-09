@@ -1,12 +1,12 @@
 package config
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 
@@ -50,6 +50,77 @@ func LoadConfig(configPath string) (models.Config, error) {
 	return config, nil
 }
 
+// GetDefaultConfigPaths returns platform-specific default configuration file paths
+func GetDefaultConfigPaths() []string {
+	var paths []string
+	
+	switch runtime.GOOS {
+	case "darwin":
+		// macOS: ~/Library/Preferences/com.replicated.replbac/
+		if home, err := os.UserHomeDir(); err == nil {
+			paths = append(paths, filepath.Join(home, "Library", "Preferences", "com.replicated.replbac", "config.yaml"))
+			
+			// Also check .config as fallback
+			paths = append(paths, filepath.Join(home, ".config", "replbac", "config.yaml"))
+		}
+		
+	case "linux":
+		// Linux: XDG_CONFIG_HOME or $HOME/.config
+		configDir := os.Getenv("XDG_CONFIG_HOME")
+		if configDir == "" {
+			if home, err := os.UserHomeDir(); err == nil {
+				configDir = filepath.Join(home, ".config")
+			}
+		}
+		
+		if configDir != "" {
+			paths = append(paths, filepath.Join(configDir, "replbac", "config.yaml"))
+		}
+		
+	default:
+		// Windows and other platforms: use home directory
+		if home, err := os.UserHomeDir(); err == nil {
+			paths = append(paths, filepath.Join(home, ".replbac", "config.yaml"))
+		}
+	}
+	
+	return paths
+}
+
+// LoadConfigWithDefaults loads configuration from multiple sources, checking default paths if no explicit path provided
+func LoadConfigWithDefaults(defaultPaths []string) (models.Config, error) {
+	// Start with default configuration
+	config := models.Config{
+		APIEndpoint: "https://api.replicated.com",
+		LogLevel:    "info",
+		Confirm:     false,
+	}
+
+	// Try to load from default paths
+	if len(defaultPaths) == 0 {
+		defaultPaths = GetDefaultConfigPaths()
+	}
+	
+	for _, configPath := range defaultPaths {
+		if _, err := os.Stat(configPath); err == nil {
+			// File exists, try to load it
+			fileConfig, err := loadFromFile(configPath)
+			if err != nil {
+				// Log error but continue to next path
+				continue
+			}
+			mergeConfigs(&config, &fileConfig)
+			break // Use first found config file
+		}
+	}
+
+	// Load from environment variables (highest priority)
+	envConfig := loadFromEnv()
+	mergeConfigs(&config, &envConfig)
+
+	return config, nil
+}
+
 // loadFromFile loads configuration from a YAML or JSON file
 func loadFromFile(configPath string) (models.Config, error) {
 	var config models.Config
@@ -65,12 +136,8 @@ func loadFromFile(configPath string) (models.Config, error) {
 		if err := yaml.Unmarshal(data, &config); err != nil {
 			return config, fmt.Errorf("failed to parse YAML config: %w", err)
 		}
-	case ".json":
-		if err := json.Unmarshal(data, &config); err != nil {
-			return config, fmt.Errorf("failed to parse JSON config: %w", err)
-		}
 	default:
-		return config, fmt.Errorf("unsupported config file format: %s", ext)
+		return config, fmt.Errorf("unsupported config file format: %s (only YAML is supported)", ext)
 	}
 
 	return config, nil
