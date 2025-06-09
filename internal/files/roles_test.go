@@ -24,16 +24,16 @@ func TestReadRoleFile(t *testing.T) {
 			fileContent: `name: admin
 resources:
   allowed:
-    - users:read
-    - users:write
-    - roles:read
+    - "**/*"
+    - "kots/app/*/read"
+    - "kots/app/*/write"
   denied:
-    - system:delete`,
+    - "kots/app/*/delete"`,
 			expectedRole: models.Role{
 				Name: "admin",
 				Resources: models.Resources{
-					Allowed: []string{"users:read", "users:write", "roles:read"},
-					Denied:  []string{"system:delete"},
+					Allowed: []string{"**/*", "kots/app/*/read", "kots/app/*/write"},
+					Denied:  []string{"kots/app/*/delete"},
 				},
 			},
 		},
@@ -43,12 +43,12 @@ resources:
 			fileContent: `name: viewer
 resources:
   allowed:
-    - users:read
-    - roles:read`,
+    - "kots/app/*/read"
+    - "team/support-issues/read"`,
 			expectedRole: models.Role{
 				Name: "viewer",
 				Resources: models.Resources{
-					Allowed: []string{"users:read", "roles:read"},
+					Allowed: []string{"kots/app/*/read", "team/support-issues/read"},
 					Denied:  nil,
 				},
 			},
@@ -233,15 +233,15 @@ func TestLoadRolesFromDirectory(t *testing.T) {
 	roleFiles := map[string]string{
 		"admin.yaml": `name: admin
 resources:
-  allowed: ["users:read", "users:write"]
-  denied: ["system:delete"]`,
+  allowed: ["**/*", "kots/app/*/read"]
+  denied: ["kots/app/*/delete"]`,
 		"viewer.yml": `name: viewer
 resources:
-  allowed: ["users:read"]`,
+  allowed: ["kots/app/*/read"]`,
 		"invalid.yaml": "name: invalid\n  bad: yaml: syntax",
 		"subdir/manager.yaml": `name: manager
 resources:
-  allowed: ["users:write", "projects:read"]`,
+  allowed: ["kots/app/*/write", "kots/app/*/channel/*/read"]`,
 	}
 
 	for relPath, content := range roleFiles {
@@ -268,21 +268,21 @@ resources:
 				{
 					Name: "admin",
 					Resources: models.Resources{
-						Allowed: []string{"users:read", "users:write"},
-						Denied:  []string{"system:delete"},
+						Allowed: []string{"**/*", "kots/app/*/read"},
+						Denied:  []string{"kots/app/*/delete"},
 					},
 				},
 				{
 					Name: "viewer",
 					Resources: models.Resources{
-						Allowed: []string{"users:read"},
+						Allowed: []string{"kots/app/*/read"},
 						Denied:  nil,
 					},
 				},
 				{
 					Name: "manager",
 					Resources: models.Resources{
-						Allowed: []string{"users:write", "projects:read"},
+						Allowed: []string{"kots/app/*/write", "kots/app/*/channel/*/read"},
 						Denied:  nil,
 					},
 				},
