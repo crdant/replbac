@@ -23,10 +23,10 @@
 - [x] Handle API token management securely
 
 #### Step 3: YAML File Operations
-- [ ] Implement YAML file reading and parsing
-- [ ] Add recursive directory traversal
-- [ ] Build robust error handling for file operations
-- [ ] Test edge cases and validation
+- [x] Implement YAML file reading and parsing
+- [x] Add recursive directory traversal
+- [x] Build robust error handling for file operations
+- [x] Test edge cases and validation
 
 #### Step 4: HTTP Client and API Integration
 - [ ] Build HTTP client wrapper for Replicated API
