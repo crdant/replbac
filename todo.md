@@ -44,7 +44,7 @@
 - [x] Implement role comparison logic
 - [x] Build sync planning and execution
 - [x] Add dry-run mode support
-- [ ] Test various sync scenarios
+- [x] Test various sync scenarios
 
 #### Step 7: Wire Main Command
 - [ ] Connect all components in main command
