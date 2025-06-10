@@ -42,8 +42,8 @@
 
 #### Step 6: Core Sync Logic
 - [x] Implement role comparison logic
-- [ ] Build sync planning and execution
-- [ ] Add dry-run mode support
+- [x] Build sync planning and execution
+- [x] Add dry-run mode support
 - [ ] Test various sync scenarios
 
 #### Step 7: Wire Main Command
