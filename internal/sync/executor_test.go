@@ -235,6 +235,15 @@ func TestExecutor_ExecutePlan(t *testing.T) {
 					return nil
 				}
 			},
+			wantCreated: []models.Role{
+				{
+					Name: "failing-role",
+					Resources: models.Resources{
+						Allowed: []string{"*"},
+						Denied:  []string{},
+					},
+				},
+			},
 			wantError:     true,
 			errorContains: "failed to create role 'failing-role'",
 		},
@@ -271,6 +280,15 @@ func TestExecutor_ExecutePlan(t *testing.T) {
 					return nil
 				}
 			},
+			wantUpdated: []models.Role{
+				{
+					Name: "failing-update",
+					Resources: models.Resources{
+						Allowed: []string{"read", "write"},
+						Denied:  []string{},
+					},
+				},
+			},
 			wantError:     true,
 			errorContains: "failed to update role 'failing-update'",
 		},
@@ -289,6 +307,7 @@ func TestExecutor_ExecutePlan(t *testing.T) {
 					return nil
 				}
 			},
+			wantDeleted:   []string{"failing-delete"},
 			wantError:     true,
 			errorContains: "failed to delete role 'failing-delete'",
 		},
@@ -327,6 +346,13 @@ func TestExecutor_ExecutePlan(t *testing.T) {
 					Name: "success-role",
 					Resources: models.Resources{
 						Allowed: []string{"read"},
+						Denied:  []string{},
+					},
+				},
+				{
+					Name: "fail-role",
+					Resources: models.Resources{
+						Allowed: []string{"write"},
 						Denied:  []string{},
 					},
 				},
