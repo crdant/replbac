@@ -41,7 +41,7 @@
 - [x] Test CLI structure and commands
 
 #### Step 6: Core Sync Logic
-- [ ] Implement role comparison logic
+- [x] Implement role comparison logic
 - [ ] Build sync planning and execution
 - [ ] Add dry-run mode support
 - [ ] Test various sync scenarios
