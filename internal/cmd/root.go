@@ -1,0 +1,95 @@
+package cmd
+
+import (
+	"fmt"
+	"os"
+
+	"github.com/spf13/cobra"
+
+	"replbac/internal/config"
+	"replbac/internal/models"
+)
+
+var (
+	cfgFile    string
+	cfg        models.Config
+	apiToken   string
+	apiEndpoint string
+	confirm    bool
+	logLevel   string
+)
+
+// rootCmd represents the base command when called without any subcommands
+var rootCmd = &cobra.Command{
+	Use:   "replbac",
+	Short: "Replicated RBAC Synchronization Tool",
+	Long: `replbac is a CLI tool for synchronizing RBAC roles between local YAML files 
+and the Replicated platform. It allows you to manage team permissions as code,
+providing version control and automated deployment of role definitions.
+
+Key features:
+• Sync local YAML role files to Replicated API
+• Initialize local files from existing API roles  
+• Dry-run mode to preview changes before applying
+• Support for multiple configuration sources`,
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		// Load configuration
+		var err error
+		
+		// If config file is specified, use it; otherwise use defaults
+		if cfgFile != "" {
+			cfg, err = config.LoadConfig(cfgFile)
+		} else {
+			cfg, err = config.LoadConfigWithDefaults(nil)
+		}
+		
+		if err != nil {
+			return fmt.Errorf("failed to load configuration: %w", err)
+		}
+		
+		// Override config with command-line flags if provided
+		if apiToken != "" {
+			cfg.APIToken = apiToken
+		}
+		if apiEndpoint != "" {
+			cfg.APIEndpoint = apiEndpoint
+		}
+		if cmd.Flags().Changed("confirm") {
+			cfg.Confirm = confirm
+		}
+		if logLevel != "" {
+			cfg.LogLevel = logLevel
+		}
+		
+		// Only validate configuration for commands that need API access
+		// Skip validation for version and help commands
+		if cmd.Name() != "version" && cmd.Name() != "help" && cmd.Name() != "completion" {
+			if err := config.ValidateConfig(cfg); err != nil {
+				return fmt.Errorf("invalid configuration: %w", err)
+			}
+		}
+		
+		return nil
+	},
+}
+
+// Execute adds all child commands to the root command and sets flags appropriately.
+// This is called by main.main(). It only needs to happen once to the rootCmd.
+func Execute() {
+	if err := rootCmd.Execute(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func init() {
+	// Global flags
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file path (default: platform-specific location)")
+	rootCmd.PersistentFlags().StringVar(&apiToken, "api-token", "", "Replicated API token")
+	rootCmd.PersistentFlags().StringVar(&apiEndpoint, "api-endpoint", "", "Replicated API endpoint URL")
+	rootCmd.PersistentFlags().BoolVar(&confirm, "confirm", false, "automatically confirm destructive operations")
+	rootCmd.PersistentFlags().StringVar(&logLevel, "log-level", "", "log level (debug, info, warn, error)")
+	
+	// Mark sensitive flags
+	rootCmd.PersistentFlags().MarkHidden("api-token")
+}
