@@ -8,6 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"replbac/internal/api"
 	"replbac/internal/models"
 )
 
@@ -45,8 +46,8 @@ func CreateEnhancedSyncCommand(config models.Config) *cobra.Command {
 			dryRun, _ := cmd.Flags().GetBool("dry-run")
 			rolesDir, _ := cmd.Flags().GetString("roles-dir")
 			
-			// Execute with enhanced error handling
-			return ExecuteSyncWithErrorHandling(cmd, args, config, dryRun, rolesDir)
+			// Use the unified sync command which now includes enhanced error handling
+			return RunSyncCommand(cmd, args, config, dryRun, rolesDir)
 		},
 	}
 	
@@ -57,40 +58,29 @@ func CreateEnhancedSyncCommand(config models.Config) *cobra.Command {
 	return cmd
 }
 
-// ExecuteSyncWithErrorHandling executes sync with comprehensive error handling
-func ExecuteSyncWithErrorHandling(cmd *cobra.Command, args []string, config models.Config, dryRun bool, rolesDir string) error {
-	// Pre-flight validation
-	if err := ValidateConfiguration(config); err != nil {
-		return HandleConfigurationError(cmd, err)
+// CreateEnhancedSyncCommandWithClient creates a sync command with mock client support
+func CreateEnhancedSyncCommandWithClient(mockClient api.ClientInterface) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "sync [directory]",
+		Short: "Synchronize local role files to Replicated API",
+		Args:  cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			// Get flag values
+			dryRun, _ := cmd.Flags().GetBool("dry-run")
+			rolesDir, _ := cmd.Flags().GetString("roles-dir")
+			
+			// Use the unified sync command with mock client
+			return RunSyncCommandWithClient(cmd, args, mockClient, dryRun, rolesDir)
+		},
 	}
-
-	// Determine target directory
-	targetDir := "."
-	if len(args) > 0 {
-		targetDir = args[0]
-	}
-	if rolesDir != "" {
-		targetDir = rolesDir
-	}
-
-	// Validate directory access
-	if err := ValidateDirectoryAccess(targetDir); err != nil {
-		return HandleFileSystemError(cmd, err, targetDir)
-	}
-
-	cmd.Printf("Synchronizing roles from directory: %s\n", targetDir)
 	
-	if dryRun {
-		cmd.Println("DRY RUN: No changes will be applied")
-	}
-
-	// Execute sync with error wrapping
-	if err := ExecuteSync(cmd, config, targetDir, dryRun); err != nil {
-		return HandleSyncError(cmd, err)
-	}
-
-	return nil
+	// Add flags
+	cmd.Flags().Bool("dry-run", false, "preview changes without applying them")
+	cmd.Flags().String("roles-dir", "", "directory containing role YAML files")
+	
+	return cmd
 }
+
 
 // ValidateConfiguration validates the configuration with detailed error messages
 func ValidateConfiguration(config models.Config) error {
@@ -149,12 +139,6 @@ func ValidateDirectoryAccess(path string) error {
 	return nil
 }
 
-// ExecuteSync performs the actual sync operation with error handling
-func ExecuteSync(cmd *cobra.Command, config models.Config, targetDir string, dryRun bool) error {
-	// This would call the existing RunSyncCommand but with enhanced error context
-	// For now, simulate the sync process with potential errors
-	return nil
-}
 
 // Error type definitions
 

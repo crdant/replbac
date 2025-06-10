@@ -13,6 +13,15 @@ import (
 	"replbac/internal/models"
 )
 
+// ClientInterface defines the interface for API operations
+type ClientInterface interface {
+	GetRoles() ([]models.Role, error)
+	GetRole(roleName string) (models.Role, error)
+	CreateRole(role models.Role) error
+	UpdateRole(role models.Role) error
+	DeleteRole(roleName string) error
+}
+
 // Client represents an HTTP client for the Replicated API
 type Client struct {
 	baseURL    string

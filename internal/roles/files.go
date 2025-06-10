@@ -81,28 +81,57 @@ func FindRoleFiles(rootPath string) ([]string, error) {
 	return files, nil
 }
 
+// LoadResult contains the results of loading roles from a directory
+type LoadResult struct {
+	Roles       []models.Role
+	SkippedFiles []SkippedFile
+}
+
+// SkippedFile represents a file that was skipped during loading
+type SkippedFile struct {
+	Path   string
+	Reason string
+}
+
 // LoadRolesFromDirectory loads all valid role files from a directory recursively
 // Invalid files are silently skipped to allow for mixed content directories
 func LoadRolesFromDirectory(rootPath string) ([]models.Role, error) {
+	result, err := LoadRolesFromDirectoryWithDetails(rootPath)
+	if err != nil {
+		return nil, err
+	}
+	return result.Roles, nil
+}
+
+// LoadRolesFromDirectoryWithDetails loads roles and returns detailed information about skipped files
+func LoadRolesFromDirectoryWithDetails(rootPath string) (*LoadResult, error) {
 	// Find all YAML files
 	files, err := FindRoleFiles(rootPath)
 	if err != nil {
 		return nil, err
 	}
 
-	var roles []models.Role
+	result := &LoadResult{
+		Roles:       []models.Role{},
+		SkippedFiles: []SkippedFile{},
+	}
 
-	// Load each file, silently skipping invalid ones
+	// Load each file, tracking skipped ones
 	for _, filePath := range files {
 		role, err := ReadRoleFile(filePath)
 		if err != nil {
-			// Skip invalid files silently to allow mixed content
+			// Track skipped files with reason
+			filename := filepath.Base(filePath)
+			result.SkippedFiles = append(result.SkippedFiles, SkippedFile{
+				Path:   filename,
+				Reason: err.Error(),
+			})
 			continue
 		}
-		roles = append(roles, role)
+		result.Roles = append(result.Roles, role)
 	}
 
-	return roles, nil
+	return result, nil
 }
 
 // ValidateRole validates that a role has required fields and valid structure

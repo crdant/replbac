@@ -11,7 +11,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"replbac/internal/models"
-	"replbac/internal/roles"
 )
 
 // TestSyncCommandIntegration tests the complete sync command workflow
@@ -65,7 +64,7 @@ resources:
 			flags:        map[string]string{},
 			expectError:  false,
 			expectOutput: []string{
-				"Created 1 role(s)",
+				"create 1 role(s)",
 				"viewer",
 			},
 			validateCalls: func(t *testing.T, calls *MockAPICalls) {
@@ -109,9 +108,7 @@ resources:
 			flags:       map[string]string{},
 			expectError: false,
 			expectOutput: []string{
-				"Created 1 role(s)",
-				"Updated 1 role(s)",
-				"Deleted 1 role(s)",
+				"create 1 role(s), update 1 role(s), and delete 1 role(s)",
 				"admin",
 				"editor",
 				"obsolete",
@@ -142,7 +139,7 @@ resources:
 			expectError:  false,
 			expectOutput: []string{
 				"Synchronizing roles from directory: roles",
-				"Created 1 role(s)",
+				"create 1 role(s)",
 				"custom",
 			},
 			validateCalls: func(t *testing.T, calls *MockAPICalls) {
@@ -167,7 +164,7 @@ resources:
 			expectError: false,
 			expectOutput: []string{
 				"Synchronizing roles from directory: special",
-				"Created 1 role(s)",
+				"create 1 role(s)",
 				"flagged",
 			},
 			validateCalls: func(t *testing.T, calls *MockAPICalls) {
@@ -205,7 +202,7 @@ resources:
 			flags:        map[string]string{},
 			expectError:  true,
 			expectOutput: []string{
-				"Error during sync",
+				"Sync failed:",
 				"failed to create role",
 			},
 			validateCalls: func(t *testing.T, calls *MockAPICalls) {
@@ -258,7 +255,7 @@ resources:
 
 			// Setup mock API
 			mockCalls := &MockAPICalls{}
-			setupMockAPI(mockCalls, tt.mockAPIRoles)
+			mockClient := NewMockClient(mockCalls, tt.mockAPIRoles)
 
 			// Change to temp directory
 			oldDir, err := os.Getwd()
@@ -272,7 +269,7 @@ resources:
 			}
 
 			// Setup command with captured output
-			cmd := NewSyncCommand()
+			cmd := NewSyncCommand(mockClient)
 			var output bytes.Buffer
 			cmd.SetOut(&output)
 			cmd.SetErr(&output)
@@ -393,8 +390,28 @@ func TestSyncCommandConfiguration(t *testing.T) {
 				defer os.Setenv(key, oldValue)
 			}
 
-			// Setup command
-			cmd := NewSyncCommand()
+			// Setup command based on test type
+			var cmd *cobra.Command
+			if tt.name == "missing API token" {
+				// For API token validation, use real command (no mock) to test validation
+				cmd = &cobra.Command{
+					Use:   "sync [directory]",
+					Short: "Synchronize local role files to Replicated API",
+					Args:  cobra.MaximumNArgs(1),
+					RunE: func(cmd *cobra.Command, args []string) error {
+						config := models.Config{
+							APIEndpoint: "https://api.replicated.com",
+							APIToken:    "", // Empty token for this test
+						}
+						return RunSyncCommand(cmd, args, config, false, "")
+					},
+				}
+			} else {
+				// Other tests use mock client to avoid real API calls
+				mockCalls := &MockAPICalls{}
+				mockClient := NewMockClient(mockCalls, []models.Role{})
+				cmd = NewSyncCommand(mockClient)
+			}
 			var output bytes.Buffer
 			cmd.SetOut(&output)
 			cmd.SetErr(&output)
@@ -437,8 +454,63 @@ type MockAPICalls struct {
 	GetCalls    int
 }
 
+// MockClient implements ClientInterface for testing
+type MockClient struct {
+	calls       *MockAPICalls
+	roles       []models.Role
+	shouldError bool
+}
+
+// NewMockClient creates a new mock client
+func NewMockClient(calls *MockAPICalls, roles []models.Role) *MockClient {
+	return &MockClient{
+		calls: calls,
+		roles: roles,
+	}
+}
+
+// GetRoles returns the configured roles
+func (m *MockClient) GetRoles() ([]models.Role, error) {
+	m.calls.GetCalls++
+	return m.roles, nil
+}
+
+// GetRole returns a specific role by name
+func (m *MockClient) GetRole(roleName string) (models.Role, error) {
+	for _, role := range m.roles {
+		if role.Name == roleName {
+			return role, nil
+		}
+	}
+	return models.Role{}, fmt.Errorf("role not found: %s", roleName)
+}
+
+// CreateRole tracks create calls
+func (m *MockClient) CreateRole(role models.Role) error {
+	m.calls.CreateCalls = append(m.calls.CreateCalls, role)
+	if role.Name == "failing" {
+		return fmt.Errorf("failed to create role 'failing': API error")
+	}
+	if role.Name == "problematic-role" {
+		return fmt.Errorf("failed to create role 'problematic-role': API error")
+	}
+	return nil
+}
+
+// UpdateRole tracks update calls
+func (m *MockClient) UpdateRole(role models.Role) error {
+	m.calls.UpdateCalls = append(m.calls.UpdateCalls, role)
+	return nil
+}
+
+// DeleteRole tracks delete calls
+func (m *MockClient) DeleteRole(roleName string) error {
+	m.calls.DeleteCalls = append(m.calls.DeleteCalls, roleName)
+	return nil
+}
+
 // Helper functions for testing
-func NewSyncCommand() *cobra.Command {
+func NewSyncCommand(mockClient *MockClient) *cobra.Command {
 	// Create a test version of the sync command
 	cmd := &cobra.Command{
 		Use:   "sync [directory]",
@@ -449,33 +521,7 @@ func NewSyncCommand() *cobra.Command {
 			dryRun, _ := cmd.Flags().GetBool("dry-run")
 			rolesDir, _ := cmd.Flags().GetString("roles-dir")
 			
-			// Create test config
-			config := models.Config{
-				APIEndpoint: "https://api.replicated.com",
-				APIToken:    "test-token",
-			}
-			
-			// For tests that expect API errors, inject a failing role name check
-			if len(args) == 0 {
-				// Check if we're in a directory with a failing.yaml file
-				// This is a simple way to trigger API errors in tests
-				targetDir := "."
-				if rolesDir != "" {
-					targetDir = rolesDir
-				}
-				
-				// Load roles to check for failing role
-				testRoles, err := roles.LoadRolesFromDirectory(targetDir)
-				if err == nil {
-					for _, role := range testRoles {
-						if role.Name == "failing" {
-							return fmt.Errorf("error during sync: failed to create role 'failing': API error")
-						}
-					}
-				}
-			}
-			
-			return RunSyncCommand(cmd, args, config, dryRun, rolesDir)
+			return RunSyncCommandWithClient(cmd, args, mockClient, dryRun, rolesDir)
 		},
 	}
 	
@@ -486,8 +532,3 @@ func NewSyncCommand() *cobra.Command {
 	return cmd
 }
 
-func setupMockAPI(calls *MockAPICalls, roles []models.Role) {
-	// For this integration test, we'll use the real API components
-	// but with controlled inputs and outputs through the file system
-	// The mock tracking is handled in the test execution
-}

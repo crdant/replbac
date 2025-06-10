@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/spf13/cobra"
+
 	"replbac/internal/models"
 )
 
@@ -182,8 +184,17 @@ resources:
 			testDir, cleanup := tt.setup(t)
 			defer cleanup()
 
-			// Create enhanced sync command with error handling
-			cmd := CreateEnhancedSyncCommand(tt.config)
+			// Create enhanced sync command with or without mock client based on test type
+			var cmd *cobra.Command
+			if tt.name == "API connection failure - clear error message" || tt.name == "missing API token - configuration error with guidance" {
+				// These tests need real error handling, not mocks
+				cmd = CreateEnhancedSyncCommand(tt.config)
+			} else {
+				// Other tests use mock client to avoid real API calls
+				mockCalls := &MockAPICalls{}
+				mockClient := NewMockClient(mockCalls, []models.Role{})
+				cmd = CreateEnhancedSyncCommandWithClient(mockClient)
+			}
 			var output bytes.Buffer
 			cmd.SetOut(&output)
 			cmd.SetErr(&output)
