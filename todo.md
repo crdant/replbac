@@ -35,10 +35,10 @@
 - [x] Test with mock HTTP server
 
 #### Step 5: Basic CLI Framework
-- [ ] Set up Cobra CLI framework
-- [ ] Implement flag parsing and validation
-- [ ] Add help text and usage information
-- [ ] Test CLI structure and commands
+- [x] Set up Cobra CLI framework
+- [x] Implement flag parsing and validation
+- [x] Add help text and usage information
+- [x] Test CLI structure and commands
 
 #### Step 6: Core Sync Logic
 - [ ] Implement role comparison logic

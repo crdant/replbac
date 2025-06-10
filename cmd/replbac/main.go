@@ -1,7 +1,7 @@
 package main
 
-import "fmt"
+import "replbac/internal/cmd"
 
 func main() {
-	fmt.Println("replbac - Replicated RBAC Synchronization Tool")
+	cmd.Execute()
 }
