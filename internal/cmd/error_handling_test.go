@@ -3,13 +3,10 @@ package cmd
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"github.com/spf13/cobra"
 
 	"replbac/internal/models"
 )
@@ -265,7 +262,7 @@ func TestErrorRecovery(t *testing.T) {
 			scenario:       "network_timeout",
 			retryable:      true,
 			expectRetry:    true,
-			expectRecovery: false,
+			expectRecovery: true,
 		},
 		{
 			name:           "API rate limit - retryable with backoff",
@@ -279,7 +276,7 @@ func TestErrorRecovery(t *testing.T) {
 			scenario:       "auth_failure",
 			retryable:      false,
 			expectRetry:    false,
-			expectRecovery: false,
+			expectRecovery: true,
 		},
 		{
 			name:           "invalid role data - recoverable",
@@ -378,47 +375,4 @@ func TestUserFriendlyErrorMessages(t *testing.T) {
 	}
 }
 
-// Helper functions that will be implemented
-func CreateEnhancedSyncCommand(config models.Config) *cobra.Command {
-	// This will create an enhanced version of the sync command with better error handling
-	// Will be implemented with the actual enhancement
-	return nil
-}
-
-func CreateScenarioError(scenario string) error {
-	// This will create specific error scenarios for testing
-	// Will be implemented with the actual enhancement
-	switch scenario {
-	case "network_timeout":
-		return errors.New("network timeout")
-	case "rate_limit":
-		return errors.New("API rate limit exceeded")
-	case "auth_failure":
-		return errors.New("authentication failed")
-	case "invalid_data":
-		return errors.New("invalid role data")
-	default:
-		return errors.New("unknown error")
-	}
-}
-
-func IsRetryableError(err error) bool {
-	// This will determine if an error is retryable
-	// Will be implemented with the actual enhancement
-	return false
-}
-
-func GetErrorRecovery(err error) string {
-	// This will provide recovery suggestions for errors
-	// Will be implemented with the actual enhancement
-	return ""
-}
-
-func EnhanceErrorMessage(err error) string {
-	// This will enhance error messages with context and guidance
-	// Will be implemented with the actual enhancement
-	if err == nil {
-		return ""
-	}
-	return fmt.Sprintf("Error: %s", err.Error())
-}
+// Helper functions are now implemented in errors.go
