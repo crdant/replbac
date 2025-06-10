@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -45,8 +46,38 @@ func init() {
 	syncCmd.Flags().StringVar(&syncRolesDir, "roles-dir", "", "directory containing role YAML files (default: current directory)")
 }
 
-// RunSyncCommand implements the main sync logic
+// RunSyncCommand implements the main sync logic with comprehensive error handling
 func RunSyncCommand(cmd *cobra.Command, args []string, config models.Config, dryRun bool, rolesDir string) error {
+	// Pre-flight validation
+	if err := ValidateConfiguration(config); err != nil {
+		return HandleConfigurationError(cmd, err)
+	}
+
+	// Determine target directory
+	targetDir := "."
+	if len(args) > 0 {
+		targetDir = args[0]
+	}
+	if rolesDir != "" {
+		targetDir = rolesDir
+	}
+
+	// Validate directory access
+	if err := ValidateDirectoryAccess(targetDir); err != nil {
+		return HandleFileSystemError(cmd, err, targetDir)
+	}
+
+	// Create API client
+	client, err := api.NewClient(config.APIEndpoint, config.APIToken)
+	if err != nil {
+		return HandleConfigurationError(cmd, fmt.Errorf("failed to create API client: %w", err))
+	}
+	
+	return RunSyncCommandWithClient(cmd, args, client, dryRun, rolesDir)
+}
+
+// RunSyncCommandWithClient implements the main sync logic with dependency injection
+func RunSyncCommandWithClient(cmd *cobra.Command, args []string, client api.ClientInterface, dryRun bool, rolesDir string) error {
 	// Determine roles directory
 	targetDir := "."
 	if len(args) > 0 {
@@ -56,28 +87,43 @@ func RunSyncCommand(cmd *cobra.Command, args []string, config models.Config, dry
 		targetDir = rolesDir
 	}
 	
-	fmt.Printf("Synchronizing roles from directory: %s\n", targetDir)
+	cmd.Printf("Synchronizing roles from directory: %s\n", targetDir)
 	
 	if dryRun {
-		fmt.Println("DRY RUN: No changes will be applied")
+		cmd.Println("DRY RUN: No changes will be applied")
 	}
 	
-	// Load local roles from directory
-	localRoles, err := roles.LoadRolesFromDirectory(targetDir)
+	// Load local roles from directory with detailed feedback
+	loadResult, err := roles.LoadRolesFromDirectoryWithDetails(targetDir)
 	if err != nil {
+		// Check if this is a permission error and handle it properly
+		if strings.Contains(err.Error(), "permission denied") {
+			permErr := &PermissionError{
+				Path:     targetDir,
+				Message:  "permission denied",
+				Guidance: "Check directory permissions and ensure read access",
+			}
+			return HandleFileSystemError(cmd, permErr, targetDir)
+		}
 		return fmt.Errorf("failed to load local roles: %w", err)
 	}
 	
-	// Create API client
-	client, err := api.NewClient(config.APIEndpoint, config.APIToken)
-	if err != nil {
-		return fmt.Errorf("failed to create API client: %w", err)
+	// Display warnings for skipped files
+	for _, skipped := range loadResult.SkippedFiles {
+		cmd.Printf("Warning: Skipped %s (%s)\n", skipped.Path, skipped.Reason)
 	}
+	
+	// Provide user guidance if files were skipped
+	if len(loadResult.SkippedFiles) > 0 {
+		cmd.Printf("Help: Check your YAML files for proper formatting and structure\n")
+	}
+	
+	localRoles := loadResult.Roles
 	
 	// Get remote roles from API
 	remoteRoles, err := client.GetRoles()
 	if err != nil {
-		return fmt.Errorf("failed to get remote roles: %w", err)
+		return HandleSyncError(cmd, fmt.Errorf("failed to get remote roles: %w", err))
 	}
 	
 	// Compare roles and generate sync plan
@@ -88,31 +134,31 @@ func RunSyncCommand(cmd *cobra.Command, args []string, config models.Config, dry
 	
 	// Display plan summary
 	if !plan.HasChanges() {
-		fmt.Println("No changes needed")
+		cmd.Println("No changes needed")
 		return nil
 	}
 	
-	fmt.Printf("Sync plan: %s\n", plan.Summary())
+	cmd.Printf("Sync plan: %s\n", plan.Summary())
 	
 	// Display detailed plan
 	if len(plan.Creates) > 0 {
-		fmt.Printf("Will create %d role(s):\n", len(plan.Creates))
+		cmd.Printf("Will create %d role(s):\n", len(plan.Creates))
 		for _, role := range plan.Creates {
-			fmt.Printf("  - %s\n", role.Name)
+			cmd.Printf("  - %s\n", role.Name)
 		}
 	}
 	
 	if len(plan.Updates) > 0 {
-		fmt.Printf("Will update %d role(s):\n", len(plan.Updates))
+		cmd.Printf("Will update %d role(s):\n", len(plan.Updates))
 		for _, update := range plan.Updates {
-			fmt.Printf("  - %s\n", update.Name)
+			cmd.Printf("  - %s\n", update.Name)
 		}
 	}
 	
 	if len(plan.Deletes) > 0 {
-		fmt.Printf("Will delete %d role(s):\n", len(plan.Deletes))
+		cmd.Printf("Will delete %d role(s):\n", len(plan.Deletes))
 		for _, roleName := range plan.Deletes {
-			fmt.Printf("  - %s\n", roleName)
+			cmd.Printf("  - %s\n", roleName)
 		}
 	}
 	
@@ -128,11 +174,17 @@ func RunSyncCommand(cmd *cobra.Command, args []string, config models.Config, dry
 	
 	// Handle execution result
 	if result.Error != nil {
-		return fmt.Errorf("error during sync: %w", result.Error)
+		syncErr := &SyncError{
+			Operation: "role synchronization",
+			Message:   result.Error.Error(),
+			Guidance:  "Check your API credentials and network connection",
+			Partial:   true, // Since execution failed, no operations completed
+		}
+		return HandleSyncError(cmd, syncErr)
 	}
 	
 	// Display execution summary
-	fmt.Printf("\nSync completed: %s\n", result.Summary())
+	cmd.Printf("\nSync completed: %s\n", result.Summary())
 	
 	return nil
 }
