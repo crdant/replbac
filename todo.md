@@ -29,10 +29,10 @@
 - [x] Test edge cases and validation
 
 #### Step 4: HTTP Client and API Integration
-- [ ] Build HTTP client wrapper for Replicated API
-- [ ] Implement role CRUD operations
-- [ ] Add proper error handling and types
-- [ ] Test with mock HTTP server
+- [x] Build HTTP client wrapper for Replicated API
+- [x] Implement role CRUD operations
+- [x] Add proper error handling and types
+- [x] Test with mock HTTP server
 
 #### Step 5: Basic CLI Framework
 - [ ] Set up Cobra CLI framework
