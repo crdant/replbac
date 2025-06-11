@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"replbac/internal/api"
+	"replbac/internal/logging"
 	"replbac/internal/models"
 	"replbac/internal/roles"
 	"replbac/internal/sync"
@@ -15,6 +16,7 @@ import (
 var (
 	syncDryRun   bool
 	syncRolesDir string
+	verbose      bool
 )
 
 // syncCmd represents the sync command
@@ -44,12 +46,22 @@ func init() {
 	// Sync-specific flags
 	syncCmd.Flags().BoolVar(&syncDryRun, "dry-run", false, "preview changes without applying them")
 	syncCmd.Flags().StringVar(&syncRolesDir, "roles-dir", "", "directory containing role YAML files (default: current directory)")
+	syncCmd.Flags().BoolVar(&verbose, "verbose", false, "enable verbose logging with debug information")
 }
 
 // RunSyncCommand implements the main sync logic with comprehensive error handling
 func RunSyncCommand(cmd *cobra.Command, args []string, config models.Config, dryRun bool, rolesDir string) error {
-	// Pre-flight validation
+	// Check if verbose flag is available and create logger
+	verbose := false
+	if cmd.Flags().Lookup("verbose") != nil {
+		verbose, _ = cmd.Flags().GetBool("verbose")
+	}
+	logger := logging.NewLogger(cmd.OutOrStdout(), verbose)
+	
+	// Pre-flight validation with logging
+	logger.Debug("validating configuration")
 	if err := ValidateConfiguration(config); err != nil {
+		logger.Error("configuration validation failed: %v", err)
 		return HandleConfigurationError(cmd, err)
 	}
 
@@ -62,18 +74,168 @@ func RunSyncCommand(cmd *cobra.Command, args []string, config models.Config, dry
 		targetDir = rolesDir
 	}
 
+	logger.Debug("validating directory access: %s", targetDir)
 	// Validate directory access
 	if err := ValidateDirectoryAccess(targetDir); err != nil {
+		logger.Error("directory access validation failed: %v", err)
 		return HandleFileSystemError(cmd, err, targetDir)
 	}
 
 	// Create API client
+	logger.Debug("creating API client")
 	client, err := api.NewClient(config.APIEndpoint, config.APIToken)
 	if err != nil {
+		logger.Error("failed to create API client: %v", err)
 		return HandleConfigurationError(cmd, fmt.Errorf("failed to create API client: %w", err))
 	}
 	
-	return RunSyncCommandWithClient(cmd, args, client, dryRun, rolesDir)
+	// Use the enhanced logging version
+	return RunSyncCommandWithLogging(cmd, args, client, dryRun, rolesDir, logger)
+}
+
+// RunSyncCommandWithLogging implements sync with enhanced logging and user feedback
+func RunSyncCommandWithLogging(cmd *cobra.Command, args []string, client api.ClientInterface, dryRun bool, rolesDir string, logger *logging.Logger) error {
+	// Determine roles directory
+	targetDir := "."
+	if len(args) > 0 {
+		targetDir = args[0]
+	}
+	if rolesDir != "" {
+		targetDir = rolesDir
+	}
+
+	logger.Info("sync operation starting")
+	logger.Debug("target directory: %s, dry-run: %v", targetDir, dryRun)
+	
+	cmd.Printf("Synchronizing roles from directory: %s\n", targetDir)
+	
+	if dryRun {
+		cmd.Println("DRY RUN: No changes will be applied")
+		logger.Debug("running in dry-run mode")
+	}
+
+	// Load local roles with progress feedback
+	logger.Progress("Processing roles...")
+	logger.Debug("loading roles from directory: %s", targetDir)
+	
+	loadResult, err := roles.LoadRolesFromDirectoryWithDetails(targetDir)
+	if err != nil {
+		logger.Error("failed to load roles from directory: %v", err)
+		if strings.Contains(err.Error(), "permission denied") {
+			permErr := &PermissionError{
+				Path:     targetDir,
+				Message:  "permission denied",
+				Guidance: "Check directory permissions and ensure read access",
+			}
+			return HandleFileSystemError(cmd, permErr, targetDir)
+		}
+		return fmt.Errorf("failed to load local roles: %w", err)
+	}
+
+	logger.Info("loaded %d roles from directory", len(loadResult.Roles))
+	if len(loadResult.SkippedFiles) > 0 {
+		logger.Warn("skipped %d invalid files", len(loadResult.SkippedFiles))
+	}
+
+	// Display warnings for skipped files
+	for _, skipped := range loadResult.SkippedFiles {
+		cmd.Printf("Warning: Skipped %s (%s)\n", skipped.Path, skipped.Reason)
+		logger.Debug("skipped file: %s (reason: %s)", skipped.Path, skipped.Reason)
+	}
+	
+	if len(loadResult.SkippedFiles) > 0 {
+		cmd.Printf("Help: Check your YAML files for proper formatting and structure\n")
+	}
+
+	localRoles := loadResult.Roles
+
+	// Get remote roles with progress feedback
+	if len(localRoles) > 0 {
+		logger.Progress("Synchronizing...")
+	}
+	logger.Debug("fetching remote roles from API")
+
+	remoteRoles, err := client.GetRoles()
+	if err != nil {
+		logger.Error("failed to fetch remote roles: %v", err)
+		return HandleSyncError(cmd, fmt.Errorf("failed to get remote roles: %w", err))
+	}
+
+	logger.Info("fetched %d remote roles", len(remoteRoles))
+	logger.Debug("comparing roles")
+
+	// Compare roles and generate sync plan
+	plan, err := sync.CompareRoles(localRoles, remoteRoles)
+	if err != nil {
+		logger.Error("failed to compare roles: %v", err)
+		return fmt.Errorf("failed to compare roles: %w", err)
+	}
+
+	logger.Debug("plan generated: %d creates, %d updates, %d deletes", len(plan.Creates), len(plan.Updates), len(plan.Deletes))
+
+	// Display plan summary
+	if !plan.HasChanges() {
+		cmd.Println("No changes needed")
+		logger.Info("no roles found" + " - no changes needed")
+		return nil
+	}
+
+	cmd.Printf("Sync plan: %s\n", plan.Summary())
+	logger.Info("sync plan: %s", plan.Summary())
+
+	// Display detailed plan
+	if len(plan.Creates) > 0 {
+		cmd.Printf("Will create %d role(s):\n", len(plan.Creates))
+		for _, role := range plan.Creates {
+			cmd.Printf("  - %s\n", role.Name)
+			logger.Debug("will create role: %s", role.Name)
+		}
+	}
+
+	if len(plan.Updates) > 0 {
+		cmd.Printf("Will update %d role(s):\n", len(plan.Updates))
+		for _, update := range plan.Updates {
+			cmd.Printf("  - %s\n", update.Name)
+			logger.Debug("will update role: %s", update.Name)
+		}
+	}
+
+	if len(plan.Deletes) > 0 {
+		cmd.Printf("Will delete %d role(s):\n", len(plan.Deletes))
+		for _, roleName := range plan.Deletes {
+			cmd.Printf("  - %s\n", roleName)
+			logger.Debug("will delete role: %s", roleName)
+		}
+	}
+
+	// Execute sync plan with timing
+	executor := sync.NewExecutor(client)
+	var result sync.ExecutionResult
+
+	err = logger.TimedOperation("sync execution", func() error {
+		if dryRun {
+			result = executor.ExecutePlanDryRun(plan)
+		} else {
+			result = executor.ExecutePlan(plan)
+		}
+		return result.Error
+	})
+
+	if err != nil {
+		syncErr := &SyncError{
+			Operation: "role synchronization",
+			Message:   err.Error(),
+			Guidance:  "Check your API credentials and network connection",
+			Partial:   true,
+		}
+		return HandleSyncError(cmd, syncErr)
+	}
+
+	// Display execution summary
+	cmd.Printf("\nSync completed: %s\n", result.Summary())
+	logger.Info("sync operation completed successfully")
+
+	return nil
 }
 
 // RunSyncCommandWithClient implements the main sync logic with dependency injection
