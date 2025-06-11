@@ -61,9 +61,13 @@ type InitResult struct {
 
 // RunInitCommand implements the main init logic with comprehensive error handling
 func RunInitCommand(cmd *cobra.Command, args []string, config models.Config, force bool, outputDir string) error {
-	// Ensure command output goes to stdout and logs go to stderr
-	cmd.SetOut(os.Stdout)
-	cmd.SetErr(os.Stderr)
+	// Ensure command output goes to stdout and logs go to stderr (unless already set for testing)
+	if cmd.OutOrStdout() == os.Stderr {
+		cmd.SetOut(os.Stdout)
+	}
+	if cmd.ErrOrStderr() == os.Stdout {
+		cmd.SetErr(os.Stderr)
+	}
 	
 	// Create logger that outputs to stderr
 	var logger *logging.Logger

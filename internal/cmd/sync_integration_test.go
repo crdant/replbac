@@ -270,9 +270,9 @@ resources:
 
 			// Setup command with captured output
 			cmd := NewSyncCommand(mockClient)
-			var output bytes.Buffer
-			cmd.SetOut(&output)
-			cmd.SetErr(&output)
+			var stdout, stderr bytes.Buffer
+			cmd.SetOut(&stdout)
+			cmd.SetErr(&stderr)
 
 			// Set flags
 			for flag, value := range tt.flags {
@@ -294,16 +294,18 @@ resources:
 				}
 			}
 
-			// Check output
-			outputStr := output.String()
+			// Check output (check both stdout and stderr)
+			stdoutStr := stdout.String()
+			stderrStr := stderr.String()
+			combinedOutput := stdoutStr + stderrStr
 			for _, expected := range tt.expectOutput {
-				if !strings.Contains(outputStr, expected) {
-					t.Errorf("Expected output to contain '%s', got:\n%s", expected, outputStr)
+				if !strings.Contains(combinedOutput, expected) {
+					t.Errorf("Expected output to contain '%s', got:\nSTDOUT:\n%s\nSTDERR:\n%s", expected, stdoutStr, stderrStr)
 				}
 			}
 			for _, notExpected := range tt.expectNoOutput {
-				if strings.Contains(outputStr, notExpected) {
-					t.Errorf("Expected output to NOT contain '%s', got:\n%s", notExpected, outputStr)
+				if strings.Contains(combinedOutput, notExpected) {
+					t.Errorf("Expected output to NOT contain '%s', got:\nSTDOUT:\n%s\nSTDERR:\n%s", notExpected, stdoutStr, stderrStr)
 				}
 			}
 
@@ -412,9 +414,9 @@ func TestSyncCommandConfiguration(t *testing.T) {
 				mockClient := NewMockClient(mockCalls, []models.Role{})
 				cmd = NewSyncCommand(mockClient)
 			}
-			var output bytes.Buffer
-			cmd.SetOut(&output)
-			cmd.SetErr(&output)
+			var stdout, stderr bytes.Buffer
+			cmd.SetOut(&stdout)
+			cmd.SetErr(&stderr)
 
 			// Set config file flag if config exists
 			if len(tt.config) > 0 {
