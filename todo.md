@@ -54,9 +54,9 @@
 
 #### Step 8: Init/Bootstrap Command
 - [x] Implement API-to-local sync (reverse direction)
-- [ ] Add file generation from API roles
-- [ ] Handle conflicts and user prompts
-- [ ] Test round-trip compatibility
+- [x] Add file generation from API roles
+- [x] Handle conflicts and user prompts
+- [x] Test round-trip compatibility (using our mocks)
 
 #### Step 9: Advanced Features
 - [ ] Enhanced dry-run reporting with diffs
@@ -69,6 +69,7 @@
 - [ ] Add comprehensive integration tests
 - [ ] Cross-platform build support
 - [ ] Final documentation and security review
+
 
 ### Notes
 - Each step should be completed with full TDD approach
