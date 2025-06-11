@@ -144,3 +144,25 @@ func ValidateRole(role models.Role) error {
 	// Allow empty resources - some roles might be placeholders or have specific use cases
 	return nil
 }
+
+// WriteRoleFile writes a role to a YAML file
+func WriteRoleFile(role models.Role, filePath string) error {
+	// Ensure directory exists
+	dir := filepath.Dir(filePath)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return fmt.Errorf("failed to create directory: %w", err)
+	}
+
+	// Marshal role to YAML
+	data, err := yaml.Marshal(&role)
+	if err != nil {
+		return fmt.Errorf("failed to marshal role to YAML: %w", err)
+	}
+
+	// Write file
+	if err := os.WriteFile(filePath, data, 0644); err != nil {
+		return fmt.Errorf("failed to write file: %w", err)
+	}
+
+	return nil
+}
