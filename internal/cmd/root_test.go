@@ -32,9 +32,9 @@ func TestRootCommand(t *testing.T) {
 			contains: "Synchronize local role files to Replicated API",
 		},
 		{
-			name:     "init help shows init usage",
-			args:     []string{"init", "--help"},
-			contains: "Initialize local role files from Replicated API",
+			name:     "pull help shows pull usage",
+			args:     []string{"pull", "--help"},
+			contains: "Pull role definitions from Replicated API",
 		},
 	}
 
@@ -166,12 +166,12 @@ func TestFlagParsing(t *testing.T) {
 			args: []string{"sync", "--roles-dir", "/tmp/roles"},
 		},
 		{
-			name: "init with output-dir flag",
-			args: []string{"init", "--output-dir", "/tmp/output"},
+			name: "pull with roles-dir flag",
+			args: []string{"pull", "--roles-dir", "/tmp/output"},
 		},
 		{
-			name: "init with force flag",
-			args: []string{"init", "--force"},
+			name: "pull with force flag",
+			args: []string{"pull", "--force"},
 		},
 	}
 
@@ -205,8 +205,8 @@ func createTestRootCmd() *cobra.Command {
 	logLevel = ""
 	syncDryRun = false
 	syncRolesDir = ""
-	initOutputDir = ""
-	initForce = false
+	pullRolesDir = ""
+	pullForce = false
 
 	// Create new command tree
 	cmd := &cobra.Command{
@@ -239,16 +239,16 @@ and the Replicated platform.`,
 	syncTestCmd.Flags().StringVar(&syncRolesDir, "roles-dir", "", "roles directory")
 	cmd.AddCommand(syncTestCmd)
 
-	initTestCmd := &cobra.Command{
-		Use:   "init",
-		Short: "Initialize local role files from Replicated API",
+	pullTestCmd := &cobra.Command{
+		Use:   "pull",
+		Short: "Pull role definitions from Replicated API to local files",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return nil
 		},
 	}
-	initTestCmd.Flags().StringVar(&initOutputDir, "output-dir", "", "output directory")
-	initTestCmd.Flags().BoolVar(&initForce, "force", false, "overwrite existing files")
-	cmd.AddCommand(initTestCmd)
+	pullTestCmd.Flags().StringVar(&pullRolesDir, "roles-dir", "", "roles directory")
+	pullTestCmd.Flags().BoolVar(&pullForce, "force", false, "overwrite existing files")
+	cmd.AddCommand(pullTestCmd)
 
 	return cmd
 }

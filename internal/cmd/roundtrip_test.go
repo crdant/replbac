@@ -11,6 +11,7 @@ import (
 
 	"replbac/internal/logging"
 	"replbac/internal/models"
+	"replbac/internal/roles"
 )
 
 // TestMockRoundTripDataIntegrity tests complete data integrity through init -> modify -> sync cycle
@@ -212,24 +213,24 @@ resources:
 			mockCalls := &MockAPICalls{}
 			mockClient := NewMockClient(mockCalls, tt.initialAPIRoles)
 
-			// Step 1: Run init command to download roles from API
-			initCmd := NewInitCommand(mockClient)
-			var initOutput bytes.Buffer
-			initCmd.SetOut(&initOutput)
-			initCmd.SetErr(&initOutput)
-			initCmd.SetArgs([]string{})
+			// Step 1: Run pull command to download roles from API
+			pullCmd := NewPullCommand(mockClient)
+			var pullOutput bytes.Buffer
+			pullCmd.SetOut(&pullOutput)
+			pullCmd.SetErr(&pullOutput)
+			pullCmd.SetArgs([]string{})
 
-			err = initCmd.Execute()
+			err = pullCmd.Execute()
 			if err != nil {
-				t.Fatalf("Init command failed: %v", err)
+				t.Fatalf("Pull command failed: %v", err)
 			}
 
 
-			// Verify init created expected files
+			// Verify pull created expected files
 			for _, role := range tt.initialAPIRoles {
 				fileName := role.Name + ".yaml"
 				if _, err := os.Stat(fileName); os.IsNotExist(err) {
-					t.Errorf("Expected init to create file %s", fileName)
+					t.Errorf("Expected pull to create file %s", fileName)
 				}
 			}
 
@@ -366,7 +367,7 @@ func TestYAMLSerializationFidelity(t *testing.T) {
 
 			// Write role to YAML file
 			filePath := filepath.Join(tempDir, tt.role.Name+".yaml")
-			err = WriteRoleFile(tt.role, filePath)
+			err = roles.WriteRoleFile(tt.role, filePath)
 			if err != nil {
 				t.Fatalf("Failed to write role file: %v", err)
 			}

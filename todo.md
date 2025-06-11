@@ -64,10 +64,10 @@
 - [x] Production readiness improvements
 
 #### Step 10: Ergonomics and User Experience
-- [ ] Rename `init` command to `pull` and add dry-run, confirm, and diff flags
+- [x] Rename `init` command to `pull` and add dry-run, confirm, and diff flags
 - [ ] Use a flag to for whether to delete roles not in local YAML files (default to false)
 - [ ] Add man page
-- [ ] Remove `--output-dir` flag and add `--roles-dir` flag since we have a positional argument
+- [x] Remove `--output-dir` flag and add `--roles-dir` flag since we have a positional argument
 - [ ] Document environment variables in help alongside the equivalent CLI flags
 - [ ] Determine if we should make any of our package public
 
