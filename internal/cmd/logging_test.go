@@ -163,7 +163,13 @@ func NewSyncCommandWithLogging(mockClient *MockClient, verbose bool) *cobra.Comm
 			// Get dry-run flag
 			dryRun, _ := cmd.Flags().GetBool("dry-run")
 			
-			return RunSyncCommandWithLogging(cmd, args, mockClient, dryRun, "", logger)
+			config := models.Config{
+				APIEndpoint: "https://api.test.com",
+				APIToken:    "test-token",
+				Confirm:     false,
+				LogLevel:    "info",
+			}
+			return RunSyncCommandWithLogging(cmd, args, mockClient, dryRun, "", logger, config)
 		},
 	}
 	
