@@ -224,8 +224,6 @@ resources:
 				t.Fatalf("Init command failed: %v", err)
 			}
 
-			// Debug: Print init output
-			t.Logf("Init output: %s", initOutput.String())
 
 			// Verify init created expected files
 			for _, role := range tt.initialAPIRoles {
@@ -254,7 +252,6 @@ resources:
 						if err != nil {
 							t.Fatalf("Failed to delete file %s: %v", fileName, err)
 						}
-						t.Logf("Deleted file: %s", fileName)
 					}
 				}
 			}
@@ -266,16 +263,7 @@ resources:
 			syncCmd.SetErr(&syncOutput)
 			syncCmd.SetArgs([]string{})
 
-			// Debug: Print state before sync
-			beforeSync, _ := mockClient.GetRoles()
-			t.Logf("Roles before sync: %+v", beforeSync)
-
 			err = syncCmd.Execute()
-
-			// Debug: Print sync output and final state
-			t.Logf("Sync output: %s", syncOutput.String())
-			afterSync, _ := mockClient.GetRoles()
-			t.Logf("Roles after sync: %+v", afterSync)
 			if tt.expectError {
 				if err == nil {
 					t.Errorf("Expected sync error but got none")

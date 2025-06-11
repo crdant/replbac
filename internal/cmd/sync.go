@@ -346,24 +346,6 @@ func RunSyncCommandWithClient(cmd *cobra.Command, args []string, client api.Clie
 		}
 	}
 	
-	// Ask for confirmation if deletions are planned and not in dry-run mode
-	if len(plan.Deletes) > 0 && !dryRun {
-		cmd.Printf("\nThis operation will permanently delete %d role(s) from the API.\n", len(plan.Deletes))
-		cmd.Print("Do you want to continue? (y/N): ")
-		
-		reader := bufio.NewReader(os.Stdin)
-		response, err := reader.ReadString('\n')
-		if err != nil {
-			return fmt.Errorf("failed to read confirmation: %w", err)
-		}
-		
-		response = strings.ToLower(strings.TrimSpace(response))
-		if response != "y" && response != "yes" {
-			cmd.Println("Operation cancelled by user")
-			return nil
-		}
-	}
-	
 	// Execute sync plan
 	executor := sync.NewExecutor(client)
 	var result sync.ExecutionResult
