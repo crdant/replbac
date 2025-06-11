@@ -128,18 +128,15 @@ func RunSyncCommandWithLogging(cmd *cobra.Command, args []string, client api.Cli
 		targetDir = rolesDir
 	}
 
-	logger.Info("sync operation starting")
-	logger.Debug("target directory: %s, dry-run: %v", targetDir, dryRun)
-	
 	cmd.Printf("Synchronizing roles from directory: %s\n", targetDir)
+	logger.Debug("sync operation starting: target directory: %s, dry-run: %v", targetDir, dryRun)
 	
 	if dryRun {
 		cmd.Println("DRY RUN: No changes will be applied")
 		logger.Debug("running in dry-run mode")
 	}
 
-	// Load local roles with progress feedback
-	logger.Info("processing roles from directory")
+	// Load local roles
 	logger.Debug("loading roles from directory: %s", targetDir)
 	
 	loadResult, err := roles.LoadRolesFromDirectoryWithDetails(targetDir)
@@ -156,7 +153,7 @@ func RunSyncCommandWithLogging(cmd *cobra.Command, args []string, client api.Cli
 		return fmt.Errorf("failed to load local roles: %w", err)
 	}
 
-	logger.Info("loaded %d roles from directory", len(loadResult.Roles))
+	logger.Debug("loaded %d roles from directory", len(loadResult.Roles))
 	if len(loadResult.SkippedFiles) > 0 {
 		logger.Warn("skipped %d invalid files", len(loadResult.SkippedFiles))
 	}
@@ -175,7 +172,7 @@ func RunSyncCommandWithLogging(cmd *cobra.Command, args []string, client api.Cli
 
 	// Get remote roles with progress feedback
 	if len(localRoles) > 0 {
-		logger.Info("synchronizing with remote API")
+		logger.Debug("synchronizing with remote API")
 	}
 	logger.Debug("fetching remote roles from API")
 
@@ -185,7 +182,7 @@ func RunSyncCommandWithLogging(cmd *cobra.Command, args []string, client api.Cli
 		return HandleSyncError(cmd, fmt.Errorf("failed to get remote roles: %w", err))
 	}
 
-	logger.Info("fetched %d remote roles", len(remoteRoles))
+	logger.Debug("fetched %d remote roles", len(remoteRoles))
 	logger.Debug("comparing roles")
 
 	// Compare roles and generate sync plan
@@ -200,12 +197,12 @@ func RunSyncCommandWithLogging(cmd *cobra.Command, args []string, client api.Cli
 	// Display plan summary
 	if !plan.HasChanges() {
 		cmd.Println("No changes needed")
-		logger.Info("no roles found" + " - no changes needed")
+		logger.Debug("no changes needed - plan has no changes")
 		return nil
 	}
 
 	cmd.Printf("Sync plan: %s\n", plan.Summary())
-	logger.Info("sync plan: %s", plan.Summary())
+	logger.Debug("sync plan: %s", plan.Summary())
 
 	// Display detailed plan
 	if len(plan.Creates) > 0 {
@@ -246,7 +243,7 @@ func RunSyncCommandWithLogging(cmd *cobra.Command, args []string, client api.Cli
 		response = strings.ToLower(strings.TrimSpace(response))
 		if response != "y" && response != "yes" {
 			cmd.Println("Operation cancelled by user")
-			logger.Info("sync operation cancelled by user")
+			logger.Debug("sync operation cancelled by user")
 			return nil
 		}
 		logger.Debug("user confirmed deletion operation")
@@ -285,7 +282,7 @@ func RunSyncCommandWithLogging(cmd *cobra.Command, args []string, client api.Cli
 	} else {
 		cmd.Printf("\nSync completed: %s\n", result.Summary())
 	}
-	logger.Info("sync operation completed successfully")
+	logger.Debug("sync operation completed successfully")
 
 	return nil
 }

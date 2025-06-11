@@ -28,16 +28,16 @@ func TestLoggingAndFeedback(t *testing.T) {
 			},
 			setupRemote:    []models.Role{},
 			dryRun:         false,
-			expectLogs:     []string{"[INFO]", "sync operation", "loaded 0 roles"},
-			expectProgress: []string{"processing roles from directory"},
+			expectLogs:     []string{"[DEBUG]", "sync operation", "loaded 0 roles"},
+			expectProgress: []string{"loading roles from directory"},
 		},
 		{
 			name:           "shows progress for empty directory",
 			setupRoles:     []models.Role{},
 			setupRemote:    []models.Role{},
 			dryRun:         false,
-			expectLogs:     []string{"[INFO]", "no roles found"},
-			expectProgress: []string{"processing roles from directory"},
+			expectLogs:     []string{"[DEBUG]", "no changes needed"},
+			expectProgress: []string{"loading roles from directory"},
 		},
 		{
 			name: "provides debug information in verbose mode",
@@ -46,7 +46,7 @@ func TestLoggingAndFeedback(t *testing.T) {
 			},
 			setupRemote: []models.Role{},
 			dryRun:      true,
-			expectLogs:  []string{"[INFO]", "sync operation"},
+			expectLogs:  []string{"[DEBUG]", "sync operation"},
 		},
 		{
 			name: "tracks operation timing",
@@ -55,8 +55,8 @@ func TestLoggingAndFeedback(t *testing.T) {
 			},
 			setupRemote:    []models.Role{},
 			dryRun:         false,
-			expectLogs:     []string{"[INFO]", "sync operation"},
-			expectProgress: []string{"processing roles from directory"},
+			expectLogs:     []string{"[DEBUG]", "sync operation"},
+			expectProgress: []string{"loading roles from directory"},
 		},
 	}
 

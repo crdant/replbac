@@ -78,8 +78,8 @@ func RunInitCommand(cmd *cobra.Command, args []string, config models.Config, for
 		targetDir = outputDir
 	}
 
-	logger.Info("starting init operation in directory: %s", targetDir)
 	cmd.Printf("Initializing role files in directory: %s\n", targetDir)
+	logger.Debug("starting init operation in directory: %s", targetDir)
 	
 	if force {
 		cmd.Println("FORCE: Existing files will be overwritten")

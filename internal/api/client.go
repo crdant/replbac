@@ -99,13 +99,13 @@ func (c *Client) getPolicies() ([]models.Policy, error) {
 		return nil, fmt.Errorf("failed to parse response: %w", err)
 	}
 
-	c.logger.Info("successfully fetched %d policies from API", len(response.Policies))
+	c.logger.Debug("successfully fetched %d policies from API", len(response.Policies))
 	return response.Policies, nil
 }
 
 // GetRoles retrieves all roles from the API
 func (c *Client) GetRoles() ([]models.Role, error) {
-	c.logger.Info("starting GetRoles operation")
+	c.logger.Debug("starting GetRoles operation")
 	policies, err := c.getPolicies()
 	if err != nil {
 		c.logger.Error("GetRoles failed during policy fetch: %v", err)
@@ -125,7 +125,7 @@ func (c *Client) GetRoles() ([]models.Role, error) {
 		roles = append(roles, role)
 	}
 
-	c.logger.Info("successfully retrieved %d roles from API", len(roles))
+	c.logger.Debug("successfully retrieved %d roles from API", len(roles))
 	return roles, nil
 }
 
