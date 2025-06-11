@@ -120,7 +120,8 @@ confirm: true`,
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Clean up environment
+			// Clean up environment before and after test
+			cleanupEnv()
 			defer cleanupEnv()
 
 			// Set environment variables
@@ -276,7 +277,8 @@ func TestGetDefaultConfigPaths(t *testing.T) {
 }
 
 func TestLoadConfigWithDefaultPaths(t *testing.T) {
-	// Clean up environment
+	// Clean up environment before and after test
+	cleanupEnv()
 	defer cleanupEnv()
 	
 	// Create a temporary config file in a known location
@@ -309,7 +311,8 @@ log_level: debug`
 }
 
 func TestLoadConfigWithEnvironmentConfigPath(t *testing.T) {
-	// Clean up environment
+	// Clean up environment before and after test
+	cleanupEnv()
 	defer cleanupEnv()
 	
 	// Create a temporary config file
@@ -345,7 +348,8 @@ log_level: warn`
 }
 
 func TestLoadConfigEnvironmentOverridesConfigFile(t *testing.T) {
-	// Clean up environment
+	// Clean up environment before and after test
+	cleanupEnv()
 	defer cleanupEnv()
 	
 	// Create a temporary config file

@@ -70,26 +70,30 @@ func TestGetRoles(t *testing.T) {
 		{
 			name:           "successful get roles",
 			mockStatusCode: http.StatusOK,
-			mockResponse: `[
-				{
-					"v1": {
+			mockResponse: `{
+				"policies": [
+					{
+						"id": "test-admin-id",
+						"teamId": "test-team",
 						"name": "admin",
-						"resources": {
-							"allowed": ["**/*"],
-							"denied": ["kots/app/*/delete"]
-						}
-					}
-				},
-				{
-					"v1": {
+						"description": "Admin policy",
+						"definition": "{\"v1\":{\"name\":\"admin\",\"resources\":{\"allowed\":[\"**/*\"],\"denied\":[\"kots/app/*/delete\"]}}}",
+						"createdAt": "2023-01-01T00:00:00Z",
+						"modifiedAt": null,
+						"readOnly": false
+					},
+					{
+						"id": "test-viewer-id", 
+						"teamId": "test-team",
 						"name": "viewer",
-						"resources": {
-							"allowed": ["kots/app/*/read"],
-							"denied": []
-						}
+						"description": "Viewer policy",
+						"definition": "{\"v1\":{\"name\":\"viewer\",\"resources\":{\"allowed\":[\"kots/app/*/read\"],\"denied\":[]}}}",
+						"createdAt": "2023-01-01T00:00:00Z",
+						"modifiedAt": null,
+						"readOnly": false
 					}
-				}
-			]`,
+				]
+			}`,
 			expectedRoles: []models.Role{
 				{
 					Name: "admin",
@@ -110,7 +114,7 @@ func TestGetRoles(t *testing.T) {
 		{
 			name:           "empty roles list",
 			mockStatusCode: http.StatusOK,
-			mockResponse:   `[]`,
+			mockResponse:   `{"policies": []}`,
 			expectedRoles:  []models.Role{},
 		},
 		{
@@ -134,14 +138,14 @@ func TestGetRoles(t *testing.T) {
 				if r.Method != http.MethodGet {
 					t.Errorf("Expected GET request, got %s", r.Method)
 				}
-				if r.URL.Path != "/v1/team/policies" {
-					t.Errorf("Expected path /v1/team/policies, got %s", r.URL.Path)
+				if r.URL.Path != "/vendor/v3/policies" {
+					t.Errorf("Expected path /vendor/v3/policies, got %s", r.URL.Path)
 				}
 
 				// Verify authorization header
 				authHeader := r.Header.Get("Authorization")
-				if authHeader != "Bearer test-token" {
-					t.Errorf("Expected Authorization header 'Bearer test-token', got '%s'", authHeader)
+				if authHeader != "test-token" {
+					t.Errorf("Expected Authorization header 'test-token', got '%s'", authHeader)
 				}
 
 				w.WriteHeader(tt.mockStatusCode)
@@ -225,8 +229,8 @@ func TestCreateRole(t *testing.T) {
 				if r.Method != http.MethodPost {
 					t.Errorf("Expected POST request, got %s", r.Method)
 				}
-				if r.URL.Path != "/v1/team/policies" {
-					t.Errorf("Expected path /v1/team/policies, got %s", r.URL.Path)
+				if r.URL.Path != "/vendor/v3/policy" {
+					t.Errorf("Expected path /vendor/v3/policy, got %s", r.URL.Path)
 				}
 
 				// Verify content type
@@ -315,7 +319,7 @@ func TestUpdateRole(t *testing.T) {
 				if r.Method != http.MethodPut {
 					t.Errorf("Expected PUT request, got %s", r.Method)
 				}
-				expectedPath := "/v1/team/policies/" + role.Name
+				expectedPath := "/vendor/v3/policy/" + role.Name
 				if r.URL.Path != expectedPath {
 					t.Errorf("Expected path %s, got %s", expectedPath, r.URL.Path)
 				}
@@ -376,7 +380,7 @@ func TestDeleteRole(t *testing.T) {
 				if r.Method != http.MethodDelete {
 					t.Errorf("Expected DELETE request, got %s", r.Method)
 				}
-				expectedPath := "/v1/team/policies/" + tt.roleName
+				expectedPath := "/vendor/v3/policy/" + tt.roleName
 				if r.URL.Path != expectedPath {
 					t.Errorf("Expected path %s, got %s", expectedPath, r.URL.Path)
 				}
@@ -453,7 +457,7 @@ func TestGetRole(t *testing.T) {
 				if r.Method != http.MethodGet {
 					t.Errorf("Expected GET request, got %s", r.Method)
 				}
-				expectedPath := "/v1/team/policies/" + tt.roleName
+				expectedPath := "/vendor/v3/policy/" + tt.roleName
 				if r.URL.Path != expectedPath {
 					t.Errorf("Expected path %s, got %s", expectedPath, r.URL.Path)
 				}

@@ -53,14 +53,14 @@ func NewClient(baseURL, apiToken string) (*Client, error) {
 
 // GetRoles retrieves all roles from the API
 func (c *Client) GetRoles() ([]models.Role, error) {
-	url := c.baseURL + "/v1/team/policies"
+	url := c.baseURL + "/vendor/v3/policies"
 
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
-	req.Header.Set("Authorization", "Bearer "+c.apiToken)
+	req.Header.Set("Authorization", c.apiToken)
 	req.Header.Set("Accept", "application/json")
 
 	resp, err := c.httpClient.Do(req)
@@ -78,15 +78,22 @@ func (c *Client) GetRoles() ([]models.Role, error) {
 		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}
 
-	var apiRoles []models.APIRole
-	if err := json.Unmarshal(body, &apiRoles); err != nil {
+	// Parse the response which has a "policies" wrapper
+	var response struct {
+		Policies []models.Policy `json:"policies"`
+	}
+	if err := json.Unmarshal(body, &response); err != nil {
 		return nil, fmt.Errorf("failed to parse response: %w", err)
 	}
 
-	// Convert API roles to local roles
-	roles := make([]models.Role, len(apiRoles))
-	for i, apiRole := range apiRoles {
-		roles[i] = apiRole.ToRole()
+	// Convert policies to local roles
+	roles := make([]models.Role, 0, len(response.Policies))
+	for _, policy := range response.Policies {
+		role, err := policy.ToRole()
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert policy %s: %w", policy.Name, err)
+		}
+		roles = append(roles, role)
 	}
 
 	return roles, nil
@@ -94,14 +101,14 @@ func (c *Client) GetRoles() ([]models.Role, error) {
 
 // GetRole retrieves a specific role by name from the API
 func (c *Client) GetRole(roleName string) (models.Role, error) {
-	url := c.baseURL + "/v1/team/policies/" + roleName
+	url := c.baseURL + "/vendor/v3/policy/" + roleName
 
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return models.Role{}, fmt.Errorf("failed to create request: %w", err)
 	}
 
-	req.Header.Set("Authorization", "Bearer "+c.apiToken)
+	req.Header.Set("Authorization", c.apiToken)
 	req.Header.Set("Accept", "application/json")
 
 	resp, err := c.httpClient.Do(req)
@@ -129,7 +136,7 @@ func (c *Client) GetRole(roleName string) (models.Role, error) {
 
 // CreateRole creates a new role via the API
 func (c *Client) CreateRole(role models.Role) error {
-	url := c.baseURL + "/v1/team/policies"
+	url := c.baseURL + "/vendor/v3/policy"
 
 	// Convert role to API format
 	apiRole := role.ToAPIRole()
@@ -144,7 +151,7 @@ func (c *Client) CreateRole(role models.Role) error {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
 
-	req.Header.Set("Authorization", "Bearer "+c.apiToken)
+	req.Header.Set("Authorization", c.apiToken)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 
@@ -163,7 +170,7 @@ func (c *Client) CreateRole(role models.Role) error {
 
 // UpdateRole updates an existing role via the API
 func (c *Client) UpdateRole(role models.Role) error {
-	url := c.baseURL + "/v1/team/policies/" + role.Name
+	url := c.baseURL + "/vendor/v3/policy/" + role.Name
 
 	// Convert role to API format
 	apiRole := role.ToAPIRole()
@@ -178,7 +185,7 @@ func (c *Client) UpdateRole(role models.Role) error {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
 
-	req.Header.Set("Authorization", "Bearer "+c.apiToken)
+	req.Header.Set("Authorization", c.apiToken)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 
@@ -197,14 +204,14 @@ func (c *Client) UpdateRole(role models.Role) error {
 
 // DeleteRole deletes a role by name via the API
 func (c *Client) DeleteRole(roleName string) error {
-	url := c.baseURL + "/v1/team/policies/" + roleName
+	url := c.baseURL + "/vendor/v3/policy/" + roleName
 
 	req, err := http.NewRequest(http.MethodDelete, url, nil)
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
 
-	req.Header.Set("Authorization", "Bearer "+c.apiToken)
+	req.Header.Set("Authorization", c.apiToken)
 	req.Header.Set("Accept", "application/json")
 
 	resp, err := c.httpClient.Do(req)
