@@ -28,9 +28,6 @@ func TestSignalHandling(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
-
 			// Create signal channel
 			sigChan := make(chan os.Signal, 1)
 			shutdownChan := make(chan bool, 1)

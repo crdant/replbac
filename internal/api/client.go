@@ -2,9 +2,11 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"net/url"
 	"strings"
@@ -17,10 +19,15 @@ import (
 // ClientInterface defines the interface for API operations
 type ClientInterface interface {
 	GetRoles() ([]models.Role, error)
+	GetRolesWithContext(ctx context.Context) ([]models.Role, error)
 	GetRole(roleName string) (models.Role, error)
+	GetRoleWithContext(ctx context.Context, roleName string) (models.Role, error)
 	CreateRole(role models.Role) error
+	CreateRoleWithContext(ctx context.Context, role models.Role) error
 	UpdateRole(role models.Role) error
+	UpdateRoleWithContext(ctx context.Context, role models.Role) error
 	DeleteRole(roleName string) error
+	DeleteRoleWithContext(ctx context.Context, roleName string) error
 }
 
 // Client represents an HTTP client for the Replicated API
@@ -29,10 +36,16 @@ type Client struct {
 	apiToken   string
 	httpClient *http.Client
 	logger     *logging.Logger
+	maxRetries int
 }
 
 // NewClient creates a new API client with the given base URL and API token
 func NewClient(baseURL, apiToken string, logger *logging.Logger) (*Client, error) {
+	return NewClientWithRetry(baseURL, apiToken, logger, 3)
+}
+
+// NewClientWithRetry creates a new API client with configurable retry logic
+func NewClientWithRetry(baseURL, apiToken string, logger *logging.Logger, maxRetries int) (*Client, error) {
 	// Validate base URL
 	parsedURL, err := url.Parse(baseURL)
 	if err != nil || parsedURL.Scheme == "" || (parsedURL.Scheme != "http" && parsedURL.Scheme != "https") {
@@ -52,12 +65,67 @@ func NewClient(baseURL, apiToken string, logger *logging.Logger) (*Client, error
 		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
 		},
-		logger: logger,
+		logger:     logger,
+		maxRetries: maxRetries,
 	}, nil
+}
+
+// executeWithRetry performs HTTP requests with exponential backoff retry logic
+func (c *Client) executeWithRetry(ctx context.Context, req *http.Request) (*http.Response, error) {
+	var lastErr error
+	
+	for attempt := 0; attempt <= c.maxRetries; attempt++ {
+		// Check if context was cancelled
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+		}
+		
+		// Apply exponential backoff delay (but not on first attempt)
+		if attempt > 0 {
+			backoffDuration := time.Duration(math.Pow(2, float64(attempt-1))) * time.Second
+			c.logger.Debug("retrying request after %v delay (attempt %d/%d)", backoffDuration, attempt+1, c.maxRetries+1)
+			
+			select {
+			case <-time.After(backoffDuration):
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			}
+		}
+		
+		// Clone request for retry (can't reuse request body)
+		reqClone := req.Clone(ctx)
+		
+		resp, err := c.httpClient.Do(reqClone)
+		if err != nil {
+			lastErr = fmt.Errorf("HTTP request failed: %w", err)
+			c.logger.Warn("request attempt %d failed: %v", attempt+1, err)
+			continue
+		}
+		
+		// Check if we should retry based on status code
+		if resp.StatusCode >= 500 && resp.StatusCode < 600 {
+			resp.Body.Close()
+			lastErr = fmt.Errorf("server error: HTTP %d", resp.StatusCode)
+			c.logger.Warn("request attempt %d failed with server error: HTTP %d", attempt+1, resp.StatusCode)
+			continue
+		}
+		
+		// Success or client error (don't retry client errors)
+		return resp, nil
+	}
+	
+	return nil, fmt.Errorf("request failed after %d attempts: %w", c.maxRetries+1, lastErr)
 }
 
 // getPolicies is a helper method to fetch raw policy data from the API
 func (c *Client) getPolicies() ([]models.Policy, error) {
+	return c.getPoliciesWithContext(context.Background())
+}
+
+// getPoliciesWithContext is a helper method to fetch raw policy data from the API with context
+func (c *Client) getPoliciesWithContext(ctx context.Context) ([]models.Policy, error) {
 	url := c.baseURL + "/vendor/v3/policies"
 	c.logger.Debug("fetching policies from API endpoint: %s", url)
 
@@ -70,7 +138,7 @@ func (c *Client) getPolicies() ([]models.Policy, error) {
 	req.Header.Set("Authorization", c.apiToken)
 	req.Header.Set("Accept", "application/json")
 
-	resp, err := c.httpClient.Do(req)
+	resp, err := c.executeWithRetry(ctx, req)
 	if err != nil {
 		c.logger.Error("HTTP request failed for %s: %v", url, err)
 		return nil, fmt.Errorf("failed to execute request: %w", err)
@@ -341,4 +409,202 @@ func (c *Client) handleErrorResponse(resp *http.Response) error {
 	}
 
 	return fmt.Errorf("API request failed with status %d: %s", resp.StatusCode, errorMsg)
+}
+
+// Context-aware API methods
+
+// GetRolesWithContext fetches all roles from the API with context support
+func (c *Client) GetRolesWithContext(ctx context.Context) ([]models.Role, error) {
+	c.logger.Info("fetching all roles from API")
+	start := time.Now()
+	defer func() {
+		c.logger.Debug("GetRoles completed in %v", time.Since(start))
+	}()
+
+	policies, err := c.getPoliciesWithContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	roles := make([]models.Role, len(policies))
+	for i, policy := range policies {
+		roles[i] = models.Role{
+			Name: policy.Name,
+			ID:   policy.ID,
+		}
+	}
+
+	c.logger.Info("successfully fetched %d roles from API", len(roles))
+	return roles, nil
+}
+
+// GetRoleWithContext fetches a specific role by name from the API with context support
+func (c *Client) GetRoleWithContext(ctx context.Context, roleName string) (models.Role, error) {
+	c.logger.Info("fetching role '%s' from API", roleName)
+	
+	roles, err := c.GetRolesWithContext(ctx)
+	if err != nil {
+		return models.Role{}, err
+	}
+
+	for _, role := range roles {
+		if role.Name == roleName {
+			c.logger.Info("successfully found role '%s'", roleName)
+			return role, nil
+		}
+	}
+
+	return models.Role{}, fmt.Errorf("role '%s' not found", roleName)
+}
+
+// CreateRoleWithContext creates a new role via the API with context support
+func (c *Client) CreateRoleWithContext(ctx context.Context, role models.Role) error {
+	c.logger.Info("creating role '%s' via API", role.Name)
+	start := time.Now()
+	defer func() {
+		c.logger.Debug("CreateRole for '%s' completed in %v", role.Name, time.Since(start))
+	}()
+
+	url := c.baseURL + "/vendor/v3/policies"
+	c.logger.Debug("creating role at endpoint: %s", url)
+
+	requestData := struct {
+		Name string `json:"name"`
+	}{
+		Name: role.Name,
+	}
+
+	jsonData, err := json.Marshal(requestData)
+	if err != nil {
+		c.logger.Error("failed to marshal role data for '%s': %v", role.Name, err)
+		return fmt.Errorf("failed to marshal request data: %w", err)
+	}
+
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(jsonData))
+	if err != nil {
+		c.logger.Error("failed to create HTTP request for creating role '%s': %v", role.Name, err)
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Authorization", c.apiToken)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := c.executeWithRetry(ctx, req)
+	if err != nil {
+		c.logger.Error("HTTP request failed for creating role '%s': %v", role.Name, err)
+		return fmt.Errorf("failed to execute request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	c.logger.Debug("received HTTP response for creating role '%s': status=%d", role.Name, resp.StatusCode)
+	if resp.StatusCode != http.StatusCreated {
+		c.logger.Error("failed to create role '%s': API returned status %d", role.Name, resp.StatusCode)
+		return c.handleErrorResponse(resp)
+	}
+
+	c.logger.Info("successfully created role '%s'", role.Name)
+	return nil
+}
+
+// UpdateRoleWithContext updates an existing role via the API with context support
+func (c *Client) UpdateRoleWithContext(ctx context.Context, role models.Role) error {
+	c.logger.Info("updating role '%s' via API", role.Name)
+	start := time.Now()
+	defer func() {
+		c.logger.Debug("UpdateRole for '%s' completed in %v", role.Name, time.Since(start))
+	}()
+
+	if role.ID == "" {
+		c.logger.Error("cannot update role '%s': ID is required", role.Name)
+		return fmt.Errorf("ID is required for updating role '%s'", role.Name)
+	}
+
+	url := c.baseURL + "/vendor/v3/policies/" + role.ID
+	c.logger.Debug("updating role at endpoint: %s", url)
+
+	requestData := struct {
+		Name string `json:"name"`
+	}{
+		Name: role.Name,
+	}
+
+	jsonData, err := json.Marshal(requestData)
+	if err != nil {
+		c.logger.Error("failed to marshal role data for '%s': %v", role.Name, err)
+		return fmt.Errorf("failed to marshal request data: %w", err)
+	}
+
+	req, err := http.NewRequest(http.MethodPut, url, bytes.NewReader(jsonData))
+	if err != nil {
+		c.logger.Error("failed to create HTTP request for updating role '%s': %v", role.Name, err)
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Authorization", c.apiToken)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := c.executeWithRetry(ctx, req)
+	if err != nil {
+		c.logger.Error("HTTP request failed for updating role '%s': %v", role.Name, err)
+		return fmt.Errorf("failed to execute request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	c.logger.Debug("received HTTP response for updating role '%s': status=%d", role.Name, resp.StatusCode)
+	if resp.StatusCode != http.StatusOK {
+		c.logger.Error("failed to update role '%s': API returned status %d", role.Name, resp.StatusCode)
+		return c.handleErrorResponse(resp)
+	}
+
+	c.logger.Info("successfully updated role '%s'", role.Name)
+	return nil
+}
+
+// DeleteRoleWithContext deletes a role via the API with context support
+func (c *Client) DeleteRoleWithContext(ctx context.Context, roleName string) error {
+	c.logger.Info("deleting role '%s' via API", roleName)
+	start := time.Now()
+	defer func() {
+		c.logger.Debug("DeleteRole for '%s' completed in %v", roleName, time.Since(start))
+	}()
+
+	role, err := c.GetRoleWithContext(ctx, roleName)
+	if err != nil {
+		return fmt.Errorf("failed to find role '%s' for deletion: %w", roleName, err)
+	}
+
+	if role.ID == "" {
+		c.logger.Error("cannot delete role '%s': ID is missing", roleName)
+		return fmt.Errorf("ID is required for deleting role '%s'", roleName)
+	}
+
+	url := c.baseURL + "/vendor/v3/policies/" + role.ID
+	c.logger.Debug("deleting role at endpoint: %s", url)
+
+	req, err := http.NewRequest(http.MethodDelete, url, nil)
+	if err != nil {
+		c.logger.Error("failed to create HTTP request for deleting role '%s': %v", roleName, err)
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Authorization", c.apiToken)
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := c.executeWithRetry(ctx, req)
+	if err != nil {
+		c.logger.Error("HTTP request failed for deleting role '%s': %v", roleName, err)
+		return fmt.Errorf("failed to execute request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	c.logger.Debug("received HTTP response for deleting role '%s': status=%d", roleName, resp.StatusCode)
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
+		c.logger.Error("failed to delete role '%s': API returned status %d", roleName, resp.StatusCode)
+		return c.handleErrorResponse(resp)
+	}
+
+	c.logger.Info("successfully deleted role '%s'", roleName)
+	return nil
 }

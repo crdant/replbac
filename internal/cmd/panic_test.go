@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
-	"runtime/debug"
+	runtimeDebug "runtime/debug"
 	"testing"
 )
 
@@ -125,7 +125,7 @@ func TestStackTraceInPanicRecovery(t *testing.T) {
 		defer func() {
 			if r := recover(); r != nil {
 				fmt.Fprintf(os.Stderr, "Application panic: %v\n", r)
-				debug.PrintStack()
+				runtimeDebug.PrintStack()
 				osExit(2)
 			}
 		}()
@@ -154,7 +154,7 @@ var osExit = os.Exit
 func recoverFromPanic() {
 	if r := recover(); r != nil {
 		fmt.Fprintf(os.Stderr, "Application panic: %v\n", r)
-		debug.PrintStack()
+		runtimeDebug.PrintStack()
 		osExit(2)
 	}
 }

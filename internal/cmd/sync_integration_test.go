@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -533,6 +534,58 @@ func (m *MockClient) DeleteRole(roleName string) error {
 	}
 	// If role not found, this might be expected in some tests
 	return nil
+}
+
+// Context-aware methods (delegate to non-context versions for mock simplicity)
+
+// GetRolesWithContext returns the configured roles with context support
+func (m *MockClient) GetRolesWithContext(ctx context.Context) ([]models.Role, error) {
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+		return m.GetRoles()
+	}
+}
+
+// GetRoleWithContext returns a specific role by name with context support
+func (m *MockClient) GetRoleWithContext(ctx context.Context, roleName string) (models.Role, error) {
+	select {
+	case <-ctx.Done():
+		return models.Role{}, ctx.Err()
+	default:
+		return m.GetRole(roleName)
+	}
+}
+
+// CreateRoleWithContext tracks create calls with context support
+func (m *MockClient) CreateRoleWithContext(ctx context.Context, role models.Role) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+		return m.CreateRole(role)
+	}
+}
+
+// UpdateRoleWithContext tracks update calls with context support
+func (m *MockClient) UpdateRoleWithContext(ctx context.Context, role models.Role) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+		return m.UpdateRole(role)
+	}
+}
+
+// DeleteRoleWithContext tracks delete calls with context support
+func (m *MockClient) DeleteRoleWithContext(ctx context.Context, roleName string) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+		return m.DeleteRole(roleName)
+	}
 }
 
 // Helper functions for testing
