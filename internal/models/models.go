@@ -13,6 +13,7 @@ type Resources struct {
 
 // Role represents a role as stored in local YAML files
 type Role struct {
+	ID        string    `yaml:"id,omitempty" json:"id,omitempty"`
 	Name      string    `yaml:"name" json:"name"`
 	Resources Resources `yaml:"resources" json:"resources"`
 }
@@ -53,7 +54,8 @@ func (p Policy) ToRole() (Role, error) {
 		return Role{}, fmt.Errorf("failed to parse policy definition: %w", err)
 	}
 	role := apiRole.ToRole()
-	// Use the actual policy name instead of the name from the definition
+	// Use the actual policy name and ID instead of values from the definition
+	role.ID = p.ID
 	role.Name = p.Name
 	return role, nil
 }

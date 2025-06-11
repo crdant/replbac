@@ -159,8 +159,17 @@ func WriteRoleFile(role models.Role, filePath string) error {
 		return fmt.Errorf("failed to marshal role to YAML: %w", err)
 	}
 
+	// Add header comment if the role has an ID
+	var content []byte
+	if role.ID != "" {
+		header := "# WARNING: The 'id' field is managed by the Replicated API and should not be modified manually.\n# Changing the ID will cause sync operations to fail.\n\n"
+		content = append([]byte(header), data...)
+	} else {
+		content = data
+	}
+
 	// Write file
-	if err := os.WriteFile(filePath, data, 0644); err != nil {
+	if err := os.WriteFile(filePath, content, 0644); err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 
