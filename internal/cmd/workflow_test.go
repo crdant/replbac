@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -545,6 +546,53 @@ func (m *WorkflowMockClient) DeleteRole(roleName string) error {
 		}
 	}
 	return nil
+}
+
+// Context-aware methods for WorkflowMockClient
+
+func (m *WorkflowMockClient) GetRolesWithContext(ctx context.Context) ([]models.Role, error) {
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+		return m.GetRoles()
+	}
+}
+
+func (m *WorkflowMockClient) GetRoleWithContext(ctx context.Context, roleName string) (models.Role, error) {
+	select {
+	case <-ctx.Done():
+		return models.Role{}, ctx.Err()
+	default:
+		return m.GetRole(roleName)
+	}
+}
+
+func (m *WorkflowMockClient) CreateRoleWithContext(ctx context.Context, role models.Role) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+		return m.CreateRole(role)
+	}
+}
+
+func (m *WorkflowMockClient) UpdateRoleWithContext(ctx context.Context, role models.Role) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+		return m.UpdateRole(role)
+	}
+}
+
+func (m *WorkflowMockClient) DeleteRoleWithContext(ctx context.Context, roleName string) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+		return m.DeleteRole(roleName)
+	}
 }
 
 func NewWorkflowSyncCommand(mockClient *WorkflowMockClient) *cobra.Command {
