@@ -51,8 +51,17 @@ func init() {
 
 // RunSyncCommand implements the main sync logic with comprehensive error handling
 func RunSyncCommand(cmd *cobra.Command, args []string, config models.Config, dryRun bool, rolesDir string) error {
-	// Pre-flight validation
+	// Check if verbose flag is available and create logger
+	verbose := false
+	if cmd.Flags().Lookup("verbose") != nil {
+		verbose, _ = cmd.Flags().GetBool("verbose")
+	}
+	logger := logging.NewLogger(cmd.OutOrStdout(), verbose)
+	
+	// Pre-flight validation with logging
+	logger.Debug("validating configuration")
 	if err := ValidateConfiguration(config); err != nil {
+		logger.Error("configuration validation failed: %v", err)
 		return HandleConfigurationError(cmd, err)
 	}
 
@@ -65,18 +74,23 @@ func RunSyncCommand(cmd *cobra.Command, args []string, config models.Config, dry
 		targetDir = rolesDir
 	}
 
+	logger.Debug("validating directory access: %s", targetDir)
 	// Validate directory access
 	if err := ValidateDirectoryAccess(targetDir); err != nil {
+		logger.Error("directory access validation failed: %v", err)
 		return HandleFileSystemError(cmd, err, targetDir)
 	}
 
 	// Create API client
+	logger.Debug("creating API client")
 	client, err := api.NewClient(config.APIEndpoint, config.APIToken)
 	if err != nil {
+		logger.Error("failed to create API client: %v", err)
 		return HandleConfigurationError(cmd, fmt.Errorf("failed to create API client: %w", err))
 	}
 	
-	return RunSyncCommandWithClient(cmd, args, client, dryRun, rolesDir)
+	// Use the enhanced logging version
+	return RunSyncCommandWithLogging(cmd, args, client, dryRun, rolesDir, logger)
 }
 
 // RunSyncCommandWithLogging implements sync with enhanced logging and user feedback
