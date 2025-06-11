@@ -65,6 +65,10 @@ func init() {
 
 // RunSyncCommand implements the main sync logic with comprehensive error handling
 func RunSyncCommand(cmd *cobra.Command, args []string, config models.Config, dryRun bool, diff bool, rolesDir string) error {
+	// Ensure command output goes to stdout and logs go to stderr
+	cmd.SetOut(os.Stdout)
+	cmd.SetErr(os.Stderr)
+	
 	// Create logger that outputs to stderr
 	verbose := false
 	debug := false
@@ -289,6 +293,10 @@ func RunSyncCommandWithLogging(cmd *cobra.Command, args []string, client api.Cli
 
 // RunSyncCommandWithClient implements the main sync logic with dependency injection
 func RunSyncCommandWithClient(cmd *cobra.Command, args []string, client api.ClientInterface, dryRun bool, rolesDir string) error {
+	// Ensure command output goes to stdout and logs go to stderr
+	cmd.SetOut(os.Stdout)
+	cmd.SetErr(os.Stderr)
+	
 	// Create a logger that outputs to stderr
 	verbose := false
 	debug := false
