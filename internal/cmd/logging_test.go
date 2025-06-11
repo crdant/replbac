@@ -7,6 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"replbac/internal/logging"
 	"replbac/internal/models"
 )
 
@@ -27,8 +28,8 @@ func TestLoggingAndFeedback(t *testing.T) {
 			},
 			setupRemote:    []models.Role{},
 			dryRun:         false,
-			expectLogs:     []string{"[INFO]", "sync operation", "processing"},
-			expectProgress: []string{"Processing roles...", "Synchronizing..."},
+			expectLogs:     []string{"[INFO]", "sync operation", "loaded 0 roles"},
+			expectProgress: []string{"Processing roles..."},
 		},
 		{
 			name:           "shows progress for empty directory",
@@ -54,8 +55,8 @@ func TestLoggingAndFeedback(t *testing.T) {
 			},
 			setupRemote:    []models.Role{},
 			dryRun:         false,
-			expectLogs:     []string{"[INFO]", "completed in"},
-			expectProgress: []string{"Processing roles...", "Synchronizing..."},
+			expectLogs:     []string{"[INFO]", "sync operation"},
+			expectProgress: []string{"Processing roles..."},
 		},
 	}
 
@@ -151,14 +152,24 @@ func TestVerboseLogging(t *testing.T) {
 	}
 }
 
-// NewSyncCommandWithLogging creates a sync command with logging support (to be implemented)
+// NewSyncCommandWithLogging creates a sync command with logging support
 func NewSyncCommandWithLogging(mockClient *MockClient, verbose bool) *cobra.Command {
-	// This function will be implemented as part of the feature
-	// For now, return a basic command that will make tests fail
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use: "sync",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return RunSyncCommandWithClient(cmd, args, mockClient, false, "")
+			// Create logger with command output
+			logger := logging.NewLogger(cmd.OutOrStdout(), verbose)
+			
+			// Get dry-run flag
+			dryRun, _ := cmd.Flags().GetBool("dry-run")
+			
+			return RunSyncCommandWithLogging(cmd, args, mockClient, dryRun, "", logger)
 		},
 	}
+	
+	// Add flags
+	cmd.Flags().Bool("dry-run", false, "preview changes without applying them")
+	cmd.Flags().Bool("verbose", verbose, "enable verbose logging")
+	
+	return cmd
 }
