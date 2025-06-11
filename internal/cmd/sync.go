@@ -16,10 +16,10 @@ import (
 )
 
 var (
-	syncDryRun         bool
-	syncDryRunDetailed bool
-	syncRolesDir       string
-	verbose            bool
+	syncDryRun   bool
+	syncDiff     bool
+	syncRolesDir string
+	verbose      bool
 )
 
 // syncCmd represents the sync command
@@ -36,13 +36,13 @@ The sync operation will:
 • Create, update, or delete roles as needed to match local state
 • Provide detailed feedback on all operations performed
 
-Use --dry-run to preview changes without applying them, or --dry-run-detailed 
+Use --dry-run to preview changes without applying them, or --diff 
 for enhanced reporting with detailed diffs showing exactly what will change.`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// If detailed dry-run is enabled, enable regular dry-run too
-		effectiveDryRun := syncDryRun || syncDryRunDetailed
-		return RunSyncCommand(cmd, args, cfg, effectiveDryRun, syncDryRunDetailed, syncRolesDir)
+		// If diff is enabled, enable dry-run too
+		effectiveDryRun := syncDryRun || syncDiff
+		return RunSyncCommand(cmd, args, cfg, effectiveDryRun, syncDiff, syncRolesDir)
 	},
 }
 
@@ -51,13 +51,13 @@ func init() {
 	
 	// Sync-specific flags
 	syncCmd.Flags().BoolVar(&syncDryRun, "dry-run", false, "preview changes without applying them")
-	syncCmd.Flags().BoolVar(&syncDryRunDetailed, "dry-run-detailed", false, "preview changes with detailed diffs (implies --dry-run)")
+	syncCmd.Flags().BoolVar(&syncDiff, "diff", false, "preview changes with detailed diffs (implies --dry-run)")
 	syncCmd.Flags().StringVar(&syncRolesDir, "roles-dir", "", "directory containing role YAML files (default: current directory)")
 	syncCmd.Flags().BoolVar(&verbose, "verbose", false, "enable verbose logging with debug information")
 }
 
 // RunSyncCommand implements the main sync logic with comprehensive error handling
-func RunSyncCommand(cmd *cobra.Command, args []string, config models.Config, dryRun bool, dryRunDetailed bool, rolesDir string) error {
+func RunSyncCommand(cmd *cobra.Command, args []string, config models.Config, dryRun bool, diff bool, rolesDir string) error {
 	// Check if verbose flag is available and create logger
 	verbose := false
 	if cmd.Flags().Lookup("verbose") != nil {
@@ -97,11 +97,11 @@ func RunSyncCommand(cmd *cobra.Command, args []string, config models.Config, dry
 	}
 	
 	// Use the enhanced logging version
-	return RunSyncCommandWithLogging(cmd, args, client, dryRun, dryRunDetailed, rolesDir, logger, config)
+	return RunSyncCommandWithLogging(cmd, args, client, dryRun, diff, rolesDir, logger, config)
 }
 
 // RunSyncCommandWithLogging implements sync with enhanced logging and user feedback
-func RunSyncCommandWithLogging(cmd *cobra.Command, args []string, client api.ClientInterface, dryRun bool, dryRunDetailed bool, rolesDir string, logger *logging.Logger, config models.Config) error {
+func RunSyncCommandWithLogging(cmd *cobra.Command, args []string, client api.ClientInterface, dryRun bool, diff bool, rolesDir string, logger *logging.Logger, config models.Config) error {
 	// Determine roles directory
 	targetDir := "."
 	if len(args) > 0 {
@@ -241,7 +241,7 @@ func RunSyncCommandWithLogging(cmd *cobra.Command, args []string, client api.Cli
 
 	err = logger.TimedOperation("sync execution", func() error {
 		if dryRun {
-			if dryRunDetailed {
+			if diff {
 				result = executor.ExecutePlanDryRunWithDiffs(plan)
 			} else {
 				result = executor.ExecutePlanDryRun(plan)
@@ -263,7 +263,7 @@ func RunSyncCommandWithLogging(cmd *cobra.Command, args []string, client api.Cli
 	}
 
 	// Display execution summary
-	if dryRunDetailed && result.DetailedInfo != "" {
+	if diff && result.DetailedInfo != "" {
 		cmd.Printf("\nSync completed: %s\n", result.DetailedSummary())
 	} else {
 		cmd.Printf("\nSync completed: %s\n", result.Summary())
