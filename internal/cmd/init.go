@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"replbac/internal/api"
+	"replbac/internal/logging"
 	"replbac/internal/models"
 	"replbac/internal/roles"
 )
@@ -56,6 +57,13 @@ type InitResult struct {
 
 // RunInitCommand implements the main init logic with comprehensive error handling
 func RunInitCommand(cmd *cobra.Command, args []string, config models.Config, force bool, outputDir string) error {
+	// Create logger
+	verbose := false
+	if cmd.Flags().Lookup("verbose") != nil {
+		verbose, _ = cmd.Flags().GetBool("verbose")
+	}
+	logger := logging.NewLogger(cmd.OutOrStdout(), verbose)
+	
 	// Determine target directory
 	targetDir := "."
 	if len(args) > 0 {
@@ -65,15 +73,19 @@ func RunInitCommand(cmd *cobra.Command, args []string, config models.Config, for
 		targetDir = outputDir
 	}
 
+	logger.Info("starting init operation in directory: %s", targetDir)
 	cmd.Printf("Initializing role files in directory: %s\n", targetDir)
 	
 	if force {
 		cmd.Println("FORCE: Existing files will be overwritten")
+		logger.Debug("force mode enabled - existing files will be overwritten")
 	}
 
 	// Create API client
-	client, err := api.NewClient(config.APIEndpoint, config.APIToken)
+	logger.Debug("creating API client")
+	client, err := api.NewClient(config.APIEndpoint, config.APIToken, logger)
 	if err != nil {
+		logger.Error("failed to create API client: %v", err)
 		return fmt.Errorf("failed to create API client: %w", err)
 	}
 	

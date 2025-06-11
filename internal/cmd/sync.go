@@ -90,7 +90,7 @@ func RunSyncCommand(cmd *cobra.Command, args []string, config models.Config, dry
 
 	// Create API client
 	logger.Debug("creating API client")
-	client, err := api.NewClient(config.APIEndpoint, config.APIToken)
+	client, err := api.NewClient(config.APIEndpoint, config.APIToken, logger)
 	if err != nil {
 		logger.Error("failed to create API client: %v", err)
 		return HandleConfigurationError(cmd, fmt.Errorf("failed to create API client: %w", err))
@@ -236,7 +236,7 @@ func RunSyncCommandWithLogging(cmd *cobra.Command, args []string, client api.Cli
 	}
 
 	// Execute sync plan with timing
-	executor := sync.NewExecutor(client)
+	executor := sync.NewExecutor(client, logger)
 	var result sync.ExecutionResult
 
 	err = logger.TimedOperation("sync execution", func() error {
@@ -275,6 +275,12 @@ func RunSyncCommandWithLogging(cmd *cobra.Command, args []string, client api.Cli
 
 // RunSyncCommandWithClient implements the main sync logic with dependency injection
 func RunSyncCommandWithClient(cmd *cobra.Command, args []string, client api.ClientInterface, dryRun bool, rolesDir string) error {
+	// Create a simple logger for this function since it doesn't receive one
+	verbose := false
+	if cmd.Flags().Lookup("verbose") != nil {
+		verbose, _ = cmd.Flags().GetBool("verbose")
+	}
+	logger := logging.NewLogger(cmd.OutOrStdout(), verbose)
 	// Determine roles directory
 	targetDir := "."
 	if len(args) > 0 {
@@ -360,7 +366,7 @@ func RunSyncCommandWithClient(cmd *cobra.Command, args []string, client api.Clie
 	}
 	
 	// Execute sync plan
-	executor := sync.NewExecutor(client)
+	executor := sync.NewExecutor(client, logger)
 	var result sync.ExecutionResult
 	
 	if dryRun {

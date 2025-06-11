@@ -1,14 +1,22 @@
 package api
 
 import (
+	"bytes"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
 	"testing"
 
+	"replbac/internal/logging"
 	"replbac/internal/models"
 )
+
+// createTestLogger creates a logger for testing
+func createTestLogger() *logging.Logger {
+	var buf bytes.Buffer
+	return logging.NewLogger(&buf, true) // verbose for testing
+}
 
 func TestNewClient(t *testing.T) {
 	tests := []struct {
@@ -38,7 +46,7 @@ func TestNewClient(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			client, err := NewClient(tt.baseURL, tt.apiToken)
+			client, err := NewClient(tt.baseURL, tt.apiToken, createTestLogger())
 
 			if tt.expectError {
 				if err == nil {
@@ -155,7 +163,7 @@ func TestGetRoles(t *testing.T) {
 			}))
 			defer server.Close()
 
-			client, err := NewClient(server.URL, "test-token")
+			client, err := NewClient(server.URL, "test-token", createTestLogger())
 			if err != nil {
 				t.Fatalf("Failed to create client: %v", err)
 			}
@@ -272,7 +280,7 @@ func TestCreateRole(t *testing.T) {
 			}))
 			defer server.Close()
 
-			client, err := NewClient(server.URL, "test-token")
+			client, err := NewClient(server.URL, "test-token", createTestLogger())
 			if err != nil {
 				t.Fatalf("Failed to create client: %v", err)
 			}
@@ -347,7 +355,7 @@ func TestUpdateRole(t *testing.T) {
 			}))
 			defer server.Close()
 
-			client, err := NewClient(server.URL, "test-token")
+			client, err := NewClient(server.URL, "test-token", createTestLogger())
 			if err != nil {
 				t.Fatalf("Failed to create client: %v", err)
 			}
@@ -431,7 +439,7 @@ func TestDeleteRole(t *testing.T) {
 			}))
 			defer server.Close()
 
-			client, err := NewClient(server.URL, "test-token")
+			client, err := NewClient(server.URL, "test-token", createTestLogger())
 			if err != nil {
 				t.Fatalf("Failed to create client: %v", err)
 			}
@@ -515,7 +523,7 @@ func TestGetRole(t *testing.T) {
 			}))
 			defer server.Close()
 
-			client, err := NewClient(server.URL, "test-token")
+			client, err := NewClient(server.URL, "test-token", createTestLogger())
 			if err != nil {
 				t.Fatalf("Failed to create client: %v", err)
 			}

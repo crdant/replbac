@@ -10,6 +10,7 @@ import (
 	"replbac/internal/roles"
 )
 
+
 // TestSyncScenarios tests various end-to-end sync scenarios
 func TestSyncScenarios(t *testing.T) {
 	tests := []struct {
@@ -305,7 +306,7 @@ func TestSyncScenarios(t *testing.T) {
 
 				// Test execution
 				mockClient := &MockAPIClient{}
-				executor := NewExecutor(mockClient)
+				executor := NewExecutor(mockClient, createTestLogger())
 				result := executor.ExecutePlan(plan)
 
 				// Verify execution result
@@ -618,7 +619,7 @@ func TestSyncErrorScenarios(t *testing.T) {
 			}
 
 			// Execute sync
-			executor := NewExecutor(mockClient)
+			executor := NewExecutor(mockClient, createTestLogger())
 			result := executor.ExecutePlan(plan)
 
 			// Verify error expectations
