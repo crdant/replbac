@@ -239,15 +239,30 @@ func TestCreateRole(t *testing.T) {
 					t.Errorf("Expected Content-Type 'application/json', got '%s'", contentType)
 				}
 
-				// Verify request body contains the role
-				var requestBody models.APIRole
+				// Verify request body contains the policy structure
+				var requestBody struct {
+					Name        string `json:"name"`
+					Description string `json:"description,omitempty"`
+					Definition  string `json:"definition"`
+				}
 				if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
 					t.Errorf("Failed to decode request body: %v", err)
 				}
 
+				// Verify the policy structure
+				if requestBody.Name != tt.role.Name {
+					t.Errorf("Request body name = %s, want %s", requestBody.Name, tt.role.Name)
+				}
+
+				// Verify the definition contains the correct APIRole
+				var definitionContent models.APIRole
+				if err := json.Unmarshal([]byte(requestBody.Definition), &definitionContent); err != nil {
+					t.Errorf("Failed to decode definition: %v", err)
+				}
+
 				expectedAPIRole := tt.role.ToAPIRole()
-				if !reflect.DeepEqual(requestBody, expectedAPIRole) {
-					t.Errorf("Request body = %+v, want %+v", requestBody, expectedAPIRole)
+				if !reflect.DeepEqual(definitionContent, expectedAPIRole) {
+					t.Errorf("Definition content = %+v, want %+v", definitionContent, expectedAPIRole)
 				}
 
 				w.WriteHeader(tt.mockStatusCode)
