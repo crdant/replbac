@@ -65,11 +65,11 @@
 
 #### Step 10: Ergonomics and User Experience
 - [x] Rename `init` command to `pull` and add dry-run, confirm, and diff flags
+- [ ] Remove `--output-dir` flag and `--roles-dir` flags since we have a positional argument
 - [ ] Use a flag to for whether to delete roles not in local YAML files (default to false)
-- [ ] Add man page
-- [x] Remove `--output-dir` flag and add `--roles-dir` flag since we have a positional argument
 - [ ] Document environment variables in help alongside the equivalent CLI flags
 - [ ] Determine if we should make any of our package public
+- [ ] Add man page
 
 #### Step 11: Build System and Integration
 - [ ] Complete Makefile with all targets
@@ -81,9 +81,6 @@
 - [ ] Implement format, lint, test, and build pipeline for all commits
 - [ ] Add pull request checks and status badges
 - [ ] Implement SLSA compliant release pipeline
-
-#### Step 13: Performance Optimization
-- [ ] Performance optimizations
 
 ### Notes
 - Each step should be completed with full TDD approach
