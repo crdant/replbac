@@ -7,6 +7,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/spf13/cobra"
+
+	"replbac/internal/logging"
 	"replbac/internal/models"
 )
 
@@ -221,6 +224,9 @@ resources:
 				t.Fatalf("Init command failed: %v", err)
 			}
 
+			// Debug: Print init output
+			t.Logf("Init output: %s", initOutput.String())
+
 			// Verify init created expected files
 			for _, role := range tt.initialAPIRoles {
 				fileName := role.Name + ".yaml"
@@ -237,14 +243,39 @@ resources:
 				}
 			}
 
+			// Step 2.5: Delete files that were intentionally omitted (simulate user deleting files)
+			// Check for roles that were in the initial state but not in localModifications
+			for _, initialRole := range tt.initialAPIRoles {
+				fileName := initialRole.Name + ".yaml"
+				if _, exists := tt.localModifications[fileName]; !exists {
+					// This file should be deleted
+					if _, err := os.Stat(fileName); err == nil {
+						err = os.Remove(fileName)
+						if err != nil {
+							t.Fatalf("Failed to delete file %s: %v", fileName, err)
+						}
+						t.Logf("Deleted file: %s", fileName)
+					}
+				}
+			}
+
 			// Step 3: Run sync command to upload changes back to API
-			syncCmd := NewSyncCommand(mockClient)
+			syncCmd := NewRoundTripSyncCommand(mockClient)
 			var syncOutput bytes.Buffer
 			syncCmd.SetOut(&syncOutput)
 			syncCmd.SetErr(&syncOutput)
 			syncCmd.SetArgs([]string{})
 
+			// Debug: Print state before sync
+			beforeSync, _ := mockClient.GetRoles()
+			t.Logf("Roles before sync: %+v", beforeSync)
+
 			err = syncCmd.Execute()
+
+			// Debug: Print sync output and final state
+			t.Logf("Sync output: %s", syncOutput.String())
+			afterSync, _ := mockClient.GetRoles()
+			t.Logf("Roles after sync: %+v", afterSync)
 			if tt.expectError {
 				if err == nil {
 					t.Errorf("Expected sync error but got none")
@@ -420,6 +451,39 @@ func TestYAMLSerializationFidelity(t *testing.T) {
 }
 
 // Helper functions for round-trip testing
+
+// NewRoundTripSyncCommand creates a sync command for round-trip testing with confirm support
+func NewRoundTripSyncCommand(mockClient *MockClient) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "sync [directory]",
+		Short: "Synchronize local role files to Replicated API",
+		Args:  cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			dryRun, _ := cmd.Flags().GetBool("dry-run")
+			rolesDir, _ := cmd.Flags().GetString("roles-dir")
+			confirm, _ := cmd.Flags().GetBool("confirm")
+			
+			// For round-trip tests, automatically confirm destructive operations
+			config := models.Config{
+				APIEndpoint: "https://api.test.com",
+				APIToken:    "test-token",
+				Confirm:     confirm || true, // Always confirm in tests
+				LogLevel:    "info",
+			}
+			
+			// Use the logging version which supports confirmation
+			logger := logging.NewLogger(cmd.OutOrStdout(), false)
+			return RunSyncCommandWithLogging(cmd, args, mockClient, dryRun, rolesDir, logger, config)
+		},
+	}
+	
+	// Add flags
+	cmd.Flags().Bool("dry-run", false, "preview changes without applying them")
+	cmd.Flags().String("roles-dir", "", "directory containing role YAML files")
+	cmd.Flags().Bool("confirm", true, "automatically confirm destructive operations")
+	
+	return cmd
+}
 
 // stringSlicesEqual compares two string slices for equality
 func stringSlicesEqual(a, b []string) bool {

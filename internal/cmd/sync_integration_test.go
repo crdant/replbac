@@ -488,7 +488,7 @@ func (m *MockClient) GetRole(roleName string) (models.Role, error) {
 	return models.Role{}, fmt.Errorf("role not found: %s", roleName)
 }
 
-// CreateRole tracks create calls
+// CreateRole tracks create calls and adds to mock state
 func (m *MockClient) CreateRole(role models.Role) error {
 	m.calls.CreateCalls = append(m.calls.CreateCalls, role)
 	if role.Name == "failing" {
@@ -497,18 +497,39 @@ func (m *MockClient) CreateRole(role models.Role) error {
 	if role.Name == "problematic-role" {
 		return fmt.Errorf("failed to create role 'problematic-role': API error")
 	}
+	// Add role to mock state (simulate API assigning ID if missing)
+	if role.ID == "" {
+		role.ID = "mock-generated-id-" + role.Name
+	}
+	m.roles = append(m.roles, role)
 	return nil
 }
 
-// UpdateRole tracks update calls
+// UpdateRole tracks update calls and updates the mock state
 func (m *MockClient) UpdateRole(role models.Role) error {
 	m.calls.UpdateCalls = append(m.calls.UpdateCalls, role)
-	return nil
+	// Update the role in mock state
+	for i, existingRole := range m.roles {
+		if existingRole.ID == role.ID || (existingRole.ID == "" && existingRole.Name == role.Name) {
+			m.roles[i] = role
+			return nil
+		}
+	}
+	// If role not found, this is an error
+	return fmt.Errorf("role not found for update: %s", role.Name)
 }
 
-// DeleteRole tracks delete calls
+// DeleteRole tracks delete calls and removes from mock state
 func (m *MockClient) DeleteRole(roleName string) error {
 	m.calls.DeleteCalls = append(m.calls.DeleteCalls, roleName)
+	// Remove from mock state
+	for i, role := range m.roles {
+		if role.Name == roleName {
+			m.roles = append(m.roles[:i], m.roles[i+1:]...)
+			return nil
+		}
+	}
+	// If role not found, this might be expected in some tests
 	return nil
 }
 
