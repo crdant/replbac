@@ -69,6 +69,7 @@
 - [ ] Use a flag to for whether to delete roles not in local YAML files (default to false)
 - [ ] Document environment variables in help alongside the equivalent CLI flags
 - [ ] Determine if we should make any of our package public
+- [ ] Let's get rid of the configuration for the API endpoint since there's only one
 - [ ] Add man page
 
 #### Step 11: Build System and Integration

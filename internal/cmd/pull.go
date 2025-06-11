@@ -15,7 +15,6 @@ import (
 )
 
 var (
-	pullRolesDir string
 	pullForce    bool
 	pullDryRun   bool
 	pullDiff     bool
@@ -44,7 +43,7 @@ Use --force to overwrite existing files.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// If diff is enabled, enable dry-run too
 		effectiveDryRun := pullDryRun || pullDiff
-		return RunPullCommand(cmd, args, cfg, effectiveDryRun, pullDiff, pullRolesDir, pullForce)
+		return RunPullCommand(cmd, args, cfg, effectiveDryRun, pullDiff, pullForce)
 	},
 }
 
@@ -52,7 +51,6 @@ func init() {
 	rootCmd.AddCommand(pullCmd)
 	
 	// Pull-specific flags
-	pullCmd.Flags().StringVar(&pullRolesDir, "roles-dir", "", "directory to create role files (default: current directory)")
 	pullCmd.Flags().BoolVar(&pullForce, "force", false, "overwrite existing files")
 	pullCmd.Flags().BoolVar(&pullDryRun, "dry-run", false, "preview changes without applying them")
 	pullCmd.Flags().BoolVar(&pullDiff, "diff", false, "preview changes with detailed diffs (implies --dry-run)")
@@ -72,7 +70,7 @@ type PullResult struct {
 }
 
 // RunPullCommand implements the main pull logic with comprehensive error handling
-func RunPullCommand(cmd *cobra.Command, args []string, config models.Config, dryRun, diff bool, rolesDir string, force bool) error {
+func RunPullCommand(cmd *cobra.Command, args []string, config models.Config, dryRun, diff bool, force bool) error {
 	// Ensure command output goes to stdout and logs go to stderr (unless already set for testing)
 	if cmd.OutOrStdout() == os.Stderr {
 		cmd.SetOut(os.Stdout)
@@ -93,9 +91,6 @@ func RunPullCommand(cmd *cobra.Command, args []string, config models.Config, dry
 	targetDir := "."
 	if len(args) > 0 {
 		targetDir = args[0]
-	}
-	if rolesDir != "" {
-		targetDir = rolesDir
 	}
 
 	if dryRun {

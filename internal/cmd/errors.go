@@ -45,11 +45,10 @@ func CreateEnhancedSyncCommand(config models.Config) *cobra.Command {
 			// Get flag values
 			dryRun, _ := cmd.Flags().GetBool("dry-run")
 			diff, _ := cmd.Flags().GetBool("diff")
-			rolesDir, _ := cmd.Flags().GetString("roles-dir")
 			
 			// Use the unified sync command which now includes enhanced error handling
 			effectiveDryRun := dryRun || diff
-			return RunSyncCommand(cmd, args, config, effectiveDryRun, diff, rolesDir)
+			return RunSyncCommand(cmd, args, config, effectiveDryRun, diff)
 		},
 	}
 	
@@ -69,10 +68,9 @@ func CreateEnhancedSyncCommandWithClient(mockClient api.ClientInterface) *cobra.
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Get flag values
 			dryRun, _ := cmd.Flags().GetBool("dry-run")
-			rolesDir, _ := cmd.Flags().GetString("roles-dir")
 			
 			// Use the unified sync command with mock client
-			return RunSyncCommandWithClient(cmd, args, mockClient, dryRun, rolesDir)
+			return RunSyncCommandWithClient(cmd, args, mockClient, dryRun)
 		},
 	}
 	

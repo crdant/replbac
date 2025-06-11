@@ -222,10 +222,9 @@ resources:
 					},
 				},
 				{
-					description: "user syncs staging roles using flag",
+					description: "user syncs staging roles using positional argument",
 					command:     "sync",
-					args:        []string{},
-					flags:       map[string]string{"roles-dir": "staging"},
+					args:        []string{"staging"},
 					expectOutput: []string{
 						"Synchronizing roles from directory: staging",
 						"Sync plan: 1 to create, 2 to delete",
@@ -602,9 +601,8 @@ func NewWorkflowSyncCommand(mockClient *WorkflowMockClient) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			dryRun, _ := cmd.Flags().GetBool("dry-run")
-			rolesDir, _ := cmd.Flags().GetString("roles-dir")
 			
-			return RunSyncCommandWithClient(cmd, args, mockClient, dryRun, rolesDir)
+			return RunSyncCommandWithClient(cmd, args, mockClient, dryRun)
 		},
 	}
 	
