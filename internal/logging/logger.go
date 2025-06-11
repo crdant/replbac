@@ -23,17 +23,27 @@ type Logger struct {
 	verbose bool
 }
 
-// NewLogger creates a new logger instance
+// NewLogger creates a new logger instance that outputs to stderr by default
+// Default log level is ERROR for quiet operation
 func NewLogger(output io.Writer, verbose bool) *Logger {
-	level := InfoLevel
+	level := ErrorLevel // Default to ERROR level for quiet operation
 	if verbose {
-		level = DebugLevel
+		level = InfoLevel // --verbose enables INFO level
 	}
 	
 	return &Logger{
 		output:  output,
 		level:   level,
 		verbose: verbose,
+	}
+}
+
+// NewDebugLogger creates a logger with DEBUG level enabled
+func NewDebugLogger(output io.Writer) *Logger {
+	return &Logger{
+		output:  output,
+		level:   DebugLevel,
+		verbose: true,
 	}
 }
 
@@ -65,11 +75,6 @@ func (l *Logger) Error(msg string, args ...interface{}) {
 	}
 }
 
-// Progress logs progress messages for user feedback
-func (l *Logger) Progress(msg string, args ...interface{}) {
-	formattedMsg := fmt.Sprintf(msg, args...)
-	fmt.Fprintf(l.output, "%s\n", formattedMsg)
-}
 
 // TimedOperation tracks and logs the duration of an operation
 func (l *Logger) TimedOperation(operation string, fn func() error) error {

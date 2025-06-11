@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"replbac/internal/api"
+	"replbac/internal/logging"
 	"replbac/internal/models"
 	"replbac/internal/roles"
 )
@@ -15,6 +16,8 @@ import (
 var (
 	initOutputDir string
 	initForce     bool
+	initVerbose   bool
+	initDebug     bool
 )
 
 // initCmd represents the init command
@@ -44,6 +47,8 @@ func init() {
 	// Init-specific flags
 	initCmd.Flags().StringVar(&initOutputDir, "output-dir", "", "directory to create role files (default: current directory)")
 	initCmd.Flags().BoolVar(&initForce, "force", false, "overwrite existing files")
+	initCmd.Flags().BoolVar(&initVerbose, "verbose", false, "enable info-level logging to stderr (progress and results)")
+	initCmd.Flags().BoolVar(&initDebug, "debug", false, "enable debug-level logging to stderr (detailed operation info)")
 }
 
 // InitResult contains the results of init operation
@@ -56,6 +61,22 @@ type InitResult struct {
 
 // RunInitCommand implements the main init logic with comprehensive error handling
 func RunInitCommand(cmd *cobra.Command, args []string, config models.Config, force bool, outputDir string) error {
+	// Ensure command output goes to stdout and logs go to stderr (unless already set for testing)
+	if cmd.OutOrStdout() == os.Stderr {
+		cmd.SetOut(os.Stdout)
+	}
+	if cmd.ErrOrStderr() == os.Stdout {
+		cmd.SetErr(os.Stderr)
+	}
+	
+	// Create logger that outputs to stderr
+	var logger *logging.Logger
+	if initDebug {
+		logger = logging.NewDebugLogger(cmd.ErrOrStderr())
+	} else {
+		logger = logging.NewLogger(cmd.ErrOrStderr(), initVerbose)
+	}
+	
 	// Determine target directory
 	targetDir := "."
 	if len(args) > 0 {
@@ -66,14 +87,18 @@ func RunInitCommand(cmd *cobra.Command, args []string, config models.Config, for
 	}
 
 	cmd.Printf("Initializing role files in directory: %s\n", targetDir)
+	logger.Debug("starting init operation in directory: %s", targetDir)
 	
 	if force {
 		cmd.Println("FORCE: Existing files will be overwritten")
+		logger.Debug("force mode enabled - existing files will be overwritten")
 	}
 
 	// Create API client
-	client, err := api.NewClient(config.APIEndpoint, config.APIToken)
+	logger.Debug("creating API client")
+	client, err := api.NewClient(config.APIEndpoint, config.APIToken, logger)
 	if err != nil {
+		logger.Error("failed to create API client: %v", err)
 		return fmt.Errorf("failed to create API client: %w", err)
 	}
 	

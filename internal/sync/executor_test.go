@@ -1,11 +1,19 @@
 package sync
 
 import (
+	"bytes"
 	"errors"
 	"testing"
 
+	"replbac/internal/logging"
 	"replbac/internal/models"
 )
+
+// createTestLogger creates a logger for testing
+func createTestLogger() *logging.Logger {
+	var buf bytes.Buffer
+	return logging.NewLogger(&buf, true) // verbose for testing
+}
 
 // MockAPIClient implements the APIClient interface for testing
 type MockAPIClient struct {
@@ -369,7 +377,7 @@ func TestExecutor_ExecutePlan(t *testing.T) {
 				tt.mockSetup(mockClient)
 			}
 
-			executor := NewExecutor(mockClient)
+			executor := NewExecutor(mockClient, createTestLogger())
 			result := executor.ExecutePlan(tt.plan)
 
 			// Check error expectations
@@ -476,7 +484,7 @@ func TestExecutor_ExecutePlanDryRun(t *testing.T) {
 	}
 
 	mockClient := &MockAPIClient{}
-	executor := NewExecutor(mockClient)
+	executor := NewExecutor(mockClient, createTestLogger())
 	
 	result := executor.ExecutePlanDryRun(plan)
 
@@ -511,7 +519,7 @@ func TestExecutor_ExecutePlanDryRun(t *testing.T) {
 
 func TestNewExecutor(t *testing.T) {
 	mockClient := &MockAPIClient{}
-	executor := NewExecutor(mockClient)
+	executor := NewExecutor(mockClient, createTestLogger())
 	
 	if executor == nil {
 		t.Error("NewExecutor() returned nil")
@@ -643,7 +651,7 @@ func TestExecutor_ExecutePlanDryRunWithDiffs(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockClient := &MockAPIClient{}
-			executor := NewExecutor(mockClient)
+			executor := NewExecutor(mockClient, createTestLogger())
 			
 			result := executor.ExecutePlanDryRunWithDiffs(tt.plan)
 

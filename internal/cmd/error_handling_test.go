@@ -195,9 +195,9 @@ resources:
 				mockClient := NewMockClient(mockCalls, []models.Role{})
 				cmd = CreateEnhancedSyncCommandWithClient(mockClient)
 			}
-			var output bytes.Buffer
-			cmd.SetOut(&output)
-			cmd.SetErr(&output)
+			var stdout, stderr bytes.Buffer
+			cmd.SetOut(&stdout)
+			cmd.SetErr(&stderr)
 
 			// Set flags
 			for flag, value := range tt.flags {
@@ -233,11 +233,13 @@ resources:
 				t.Errorf("Unexpected error: %v", err)
 			}
 
-			// Check output expectations
-			outputStr := output.String()
+			// Check output expectations (check both stdout and stderr)
+			stdoutStr := stdout.String()
+			stderrStr := stderr.String()
+			combinedOutput := stdoutStr + stderrStr
 			for _, expected := range tt.expectOutput {
-				if !strings.Contains(outputStr, expected) {
-					t.Errorf("Expected output to contain '%s', got:\n%s", expected, outputStr)
+				if !strings.Contains(combinedOutput, expected) {
+					t.Errorf("Expected output to contain '%s', got:\nSTDOUT:\n%s\nSTDERR:\n%s", expected, stdoutStr, stderrStr)
 				}
 			}
 
@@ -246,13 +248,13 @@ resources:
 				guidanceKeywords := []string{"help", "try", "check", "ensure", "verify", "documentation"}
 				foundGuidance := false
 				for _, keyword := range guidanceKeywords {
-					if strings.Contains(strings.ToLower(outputStr), keyword) {
+					if strings.Contains(strings.ToLower(combinedOutput), keyword) {
 						foundGuidance = true
 						break
 					}
 				}
 				if !foundGuidance {
-					t.Errorf("Expected user guidance in error message, got:\n%s", outputStr)
+					t.Errorf("Expected user guidance in error message, got:\nSTDOUT:\n%s\nSTDERR:\n%s", stdoutStr, stderrStr)
 				}
 			}
 		})

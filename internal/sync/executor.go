@@ -5,6 +5,7 @@ import (
 	"sort"
 	"strings"
 
+	"replbac/internal/logging"
 	"replbac/internal/models"
 )
 
@@ -18,6 +19,7 @@ type APIClient interface {
 // Executor handles the execution of sync plans
 type Executor struct {
 	client APIClient
+	logger *logging.Logger
 }
 
 // ExecutionResult represents the result of executing a sync plan
@@ -31,50 +33,64 @@ type ExecutionResult struct {
 }
 
 // NewExecutor creates a new sync executor with the given API client
-func NewExecutor(client APIClient) *Executor {
+func NewExecutor(client APIClient, logger *logging.Logger) *Executor {
 	return &Executor{
 		client: client,
+		logger: logger,
 	}
 }
 
 // ExecutePlan executes a sync plan by making actual API calls
 func (e *Executor) ExecutePlan(plan SyncPlan) ExecutionResult {
+	e.logger.Info("executing sync plan: %d creates, %d updates, %d deletes", len(plan.Creates), len(plan.Updates), len(plan.Deletes))
 	result := ExecutionResult{
 		DryRun: false,
 	}
 
 	// Execute creates
 	for _, role := range plan.Creates {
+		e.logger.Debug("creating role: %s", role.Name)
 		if err := e.client.CreateRole(role); err != nil {
+			e.logger.Error("failed to create role %s: %v", role.Name, err)
 			result.Error = fmt.Errorf("failed to create role '%s': %w", role.Name, err)
 			return result
 		}
+		e.logger.Info("successfully created role: %s", role.Name)
 		result.Created++
 	}
 
 	// Execute updates
 	for _, update := range plan.Updates {
+		e.logger.Debug("updating role: %s", update.Name)
 		if err := e.client.UpdateRole(update.Local); err != nil {
+			e.logger.Error("failed to update role %s: %v", update.Name, err)
 			result.Error = fmt.Errorf("failed to update role '%s': %w", update.Name, err)
 			return result
 		}
+		e.logger.Info("successfully updated role: %s", update.Name)
 		result.Updated++
 	}
 
 	// Execute deletes
 	for _, roleName := range plan.Deletes {
+		e.logger.Debug("deleting role: %s", roleName)
 		if err := e.client.DeleteRole(roleName); err != nil {
+			e.logger.Error("failed to delete role %s: %v", roleName, err)
 			result.Error = fmt.Errorf("failed to delete role '%s': %w", roleName, err)
 			return result
 		}
+		e.logger.Info("successfully deleted role: %s", roleName)
 		result.Deleted++
 	}
 
+	e.logger.Info("sync plan execution completed successfully")
 	return result
 }
 
 // ExecutePlanDryRun simulates executing a sync plan without making actual API calls
 func (e *Executor) ExecutePlanDryRun(plan SyncPlan) ExecutionResult {
+	e.logger.Info("executing sync plan in dry-run mode: %d creates, %d updates, %d deletes", len(plan.Creates), len(plan.Updates), len(plan.Deletes))
+	
 	result := ExecutionResult{
 		Created: len(plan.Creates),
 		Updated: len(plan.Updates),
@@ -83,6 +99,7 @@ func (e *Executor) ExecutePlanDryRun(plan SyncPlan) ExecutionResult {
 		Error:   nil,
 	}
 
+	e.logger.Debug("dry-run completed - no actual changes made")
 	return result
 }
 
