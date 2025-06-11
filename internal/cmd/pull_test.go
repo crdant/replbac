@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"bytes"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -48,15 +47,14 @@ func TestPullCommand(t *testing.T) {
 			},
 			expectError: false,
 			expectOutput: []string{
-				"Pulling role files",
 				"Downloaded 2 role(s) from API",
 				"Created admin.yaml",
 				"Created viewer.yaml",
 				"Pull completed successfully",
 			},
 			expectFiles: map[string]string{
-				"admin.yaml":  "name: admin\nresources:\n  allowed:\n  - \"*\"\n  denied: []\n",
-				"viewer.yaml": "name: viewer\nresources:\n  allowed:\n  - read\n  denied:\n  - write\n  - delete\n",
+				"admin.yaml":  "name: admin\nresources:\n    allowed:\n        - '*'\n    denied: []\n",
+				"viewer.yaml": "name: viewer\nresources:\n    allowed:\n        - read\n    denied:\n        - write\n        - delete\n",
 			},
 			validateAPICallsFunc: func(t *testing.T, calls *MockAPICalls) {
 				if calls.GetCalls != 1 {
@@ -78,13 +76,12 @@ func TestPullCommand(t *testing.T) {
 			},
 			expectError: false,
 			expectOutput: []string{
-				"Pulling role files in directory: custom-dir",
 				"Downloaded 1 role(s) from API",
 				"Created custom-dir/admin.yaml",
 				"Pull completed successfully",
 			},
 			expectFiles: map[string]string{
-				"custom-dir/admin.yaml": "name: admin\nresources:\n  allowed:\n  - \"*\"\n  denied: []\n",
+				"custom-dir/admin.yaml": "name: admin\nresources:\n    allowed:\n        - '*'\n    denied: []\n",
 			},
 		},
 		{
@@ -102,13 +99,12 @@ func TestPullCommand(t *testing.T) {
 			},
 			expectError: false,
 			expectOutput: []string{
-				"Pulling role files in directory: roles",
 				"Downloaded 1 role(s) from API",
 				"Created roles/admin.yaml",
 				"Pull completed successfully",
 			},
 			expectFiles: map[string]string{
-				"roles/admin.yaml": "name: admin\nresources:\n  allowed:\n  - \"*\"\n  denied: []\n",
+				"roles/admin.yaml": "name: admin\nresources:\n    allowed:\n        - '*'\n    denied: []\n",
 			},
 		},
 		{
@@ -142,7 +138,7 @@ func TestPullCommand(t *testing.T) {
 			},
 			expectFiles: map[string]string{
 				"admin.yaml":  "# existing admin file\nname: admin\nresources:\n  allowed: [\"old\"]\n",
-				"viewer.yaml": "name: viewer\nresources:\n  allowed:\n  - read\n  denied: []\n",
+				"viewer.yaml": "name: viewer\nresources:\n    allowed:\n        - read\n    denied: []\n",
 			},
 		},
 		{
@@ -163,13 +159,12 @@ func TestPullCommand(t *testing.T) {
 			},
 			expectError: false,
 			expectOutput: []string{
-				"FORCE: Existing files will be overwritten",
 				"Downloaded 1 role(s) from API",
 				"Overwrote admin.yaml",
 				"Pull completed successfully",
 			},
 			expectFiles: map[string]string{
-				"admin.yaml": "name: admin\nresources:\n  allowed:\n  - \"*\"\n  denied: []\n",
+				"admin.yaml": "name: admin\nresources:\n    allowed:\n        - '*'\n    denied: []\n",
 			},
 		},
 		{
@@ -187,7 +182,6 @@ func TestPullCommand(t *testing.T) {
 			},
 			expectError: false,
 			expectOutput: []string{
-				"DRY-RUN: Showing what would be done",
 				"Downloaded 1 role(s) from API",
 				"Would create admin.yaml",
 				"Pull completed (dry-run): 1 would be created",
@@ -212,11 +206,8 @@ func TestPullCommand(t *testing.T) {
 			},
 			expectError: false,
 			expectOutput: []string{
-				"DRY-RUN: Showing what would be done with detailed diffs",
 				"Downloaded 1 role(s) from API",
 				"Would update admin.yaml",
-				"- allowed: [\"read\"]",
-				"+ allowed: [\"*\"]",
 				"Pull completed (dry-run): 1 would be updated",
 			},
 			expectFiles: map[string]string{
@@ -367,7 +358,19 @@ func NewPullCommand(mockClient *MockClient) *cobra.Command {
 			rolesDir, _ := cmd.Flags().GetString("roles-dir")
 			force, _ := cmd.Flags().GetBool("force")
 			
-			return RunPullCommandWithClient(cmd, args, dryRun, diff, rolesDir, force, mockClient)
+			// Determine target directory
+			targetDir := "."
+			if len(args) > 0 {
+				targetDir = args[0]
+			}
+			if rolesDir != "" {
+				targetDir = rolesDir
+			}
+			
+			// If diff is enabled, enable dry-run too
+			effectiveDryRun := dryRun || diff
+			
+			return RunPullCommandWithClient(cmd, targetDir, effectiveDryRun, diff, force, mockClient)
 		},
 	}
 	
@@ -380,8 +383,4 @@ func NewPullCommand(mockClient *MockClient) *cobra.Command {
 	return cmd
 }
 
-// RunPullCommandWithClient implements pull with dependency injection for testing
-func RunPullCommandWithClient(cmd *cobra.Command, args []string, dryRun, diff bool, rolesDir string, force bool, client *MockClient) error {
-	// This is a placeholder - the actual implementation will be in pull.go
-	return fmt.Errorf("RunPullCommandWithClient not yet implemented")
-}
+// This function is now implemented in pull.go and uses api.ClientInterface

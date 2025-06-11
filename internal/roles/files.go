@@ -175,3 +175,20 @@ func WriteRoleFile(role models.Role, filePath string) error {
 
 	return nil
 }
+
+// GenerateRoleYAML generates YAML content for a role without writing to file
+func GenerateRoleYAML(role models.Role) (string, error) {
+	// Marshal role to YAML
+	data, err := yaml.Marshal(&role)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal role to YAML: %w", err)
+	}
+
+	// Add header comment if the role has an ID
+	if role.ID != "" {
+		header := "# WARNING: The 'id' field is managed by the Replicated API and should not be modified manually.\n# Changing the ID will cause sync operations to fail.\n\n"
+		return header + string(data), nil
+	}
+	
+	return string(data), nil
+}
