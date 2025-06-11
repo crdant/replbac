@@ -1,5 +1,10 @@
 package models
 
+import (
+	"encoding/json"
+	"fmt"
+)
+
 // Resources represents the allowed and denied resources for a role
 type Resources struct {
 	Allowed []string `yaml:"allowed" json:"allowed"`
@@ -17,6 +22,18 @@ type APIRole struct {
 	V1 Role `json:"v1"`
 }
 
+// Policy represents a full policy object from the Replicated API
+type Policy struct {
+	ID          string `json:"id"`
+	TeamID      string `json:"teamId"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Definition  string `json:"definition"` // JSON string containing APIRole
+	CreatedAt   string `json:"createdAt"`
+	ModifiedAt  *string `json:"modifiedAt"`
+	ReadOnly    bool   `json:"readOnly"`
+}
+
 // ToAPIRole converts a Role to an APIRole for API communication
 func (r Role) ToAPIRole() APIRole {
 	return APIRole{
@@ -27,6 +44,18 @@ func (r Role) ToAPIRole() APIRole {
 // ToRole converts an APIRole to a Role for local processing
 func (ar APIRole) ToRole() Role {
 	return ar.V1
+}
+
+// ToRole converts a Policy to a Role by parsing the definition JSON
+func (p Policy) ToRole() (Role, error) {
+	var apiRole APIRole
+	if err := json.Unmarshal([]byte(p.Definition), &apiRole); err != nil {
+		return Role{}, fmt.Errorf("failed to parse policy definition: %w", err)
+	}
+	role := apiRole.ToRole()
+	// Use the actual policy name instead of the name from the definition
+	role.Name = p.Name
+	return role, nil
 }
 
 // Config represents the application configuration
