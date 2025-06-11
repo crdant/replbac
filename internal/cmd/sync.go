@@ -1,7 +1,9 @@
 package cmd
 
 import (
+	"bufio"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -90,11 +92,11 @@ func RunSyncCommand(cmd *cobra.Command, args []string, config models.Config, dry
 	}
 	
 	// Use the enhanced logging version
-	return RunSyncCommandWithLogging(cmd, args, client, dryRun, rolesDir, logger)
+	return RunSyncCommandWithLogging(cmd, args, client, dryRun, rolesDir, logger, config)
 }
 
 // RunSyncCommandWithLogging implements sync with enhanced logging and user feedback
-func RunSyncCommandWithLogging(cmd *cobra.Command, args []string, client api.ClientInterface, dryRun bool, rolesDir string, logger *logging.Logger) error {
+func RunSyncCommandWithLogging(cmd *cobra.Command, args []string, client api.ClientInterface, dryRun bool, rolesDir string, logger *logging.Logger, config models.Config) error {
 	// Determine roles directory
 	targetDir := "."
 	if len(args) > 0 {
@@ -206,6 +208,26 @@ func RunSyncCommandWithLogging(cmd *cobra.Command, args []string, client api.Cli
 			cmd.Printf("  - %s\n", roleName)
 			logger.Debug("will delete role: %s", roleName)
 		}
+	}
+
+	// Ask for confirmation if deletions are planned and not in dry-run mode
+	if len(plan.Deletes) > 0 && !dryRun && !config.Confirm {
+		cmd.Printf("\nThis operation will permanently delete %d role(s) from the API.\n", len(plan.Deletes))
+		cmd.Print("Do you want to continue? (y/N): ")
+		
+		reader := bufio.NewReader(os.Stdin)
+		response, err := reader.ReadString('\n')
+		if err != nil {
+			return fmt.Errorf("failed to read confirmation: %w", err)
+		}
+		
+		response = strings.ToLower(strings.TrimSpace(response))
+		if response != "y" && response != "yes" {
+			cmd.Println("Operation cancelled by user")
+			logger.Info("sync operation cancelled by user")
+			return nil
+		}
+		logger.Debug("user confirmed deletion operation")
 	}
 
 	// Execute sync plan with timing
@@ -321,6 +343,24 @@ func RunSyncCommandWithClient(cmd *cobra.Command, args []string, client api.Clie
 		cmd.Printf("Will delete %d role(s):\n", len(plan.Deletes))
 		for _, roleName := range plan.Deletes {
 			cmd.Printf("  - %s\n", roleName)
+		}
+	}
+	
+	// Ask for confirmation if deletions are planned and not in dry-run mode
+	if len(plan.Deletes) > 0 && !dryRun {
+		cmd.Printf("\nThis operation will permanently delete %d role(s) from the API.\n", len(plan.Deletes))
+		cmd.Print("Do you want to continue? (y/N): ")
+		
+		reader := bufio.NewReader(os.Stdin)
+		response, err := reader.ReadString('\n')
+		if err != nil {
+			return fmt.Errorf("failed to read confirmation: %w", err)
+		}
+		
+		response = strings.ToLower(strings.TrimSpace(response))
+		if response != "y" && response != "yes" {
+			cmd.Println("Operation cancelled by user")
+			return nil
 		}
 	}
 	
