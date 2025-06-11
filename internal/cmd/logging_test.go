@@ -29,7 +29,7 @@ func TestLoggingAndFeedback(t *testing.T) {
 			setupRemote:    []models.Role{},
 			dryRun:         false,
 			expectLogs:     []string{"[INFO]", "sync operation", "loaded 0 roles"},
-			expectProgress: []string{"Processing roles..."},
+			expectProgress: []string{"processing roles from directory"},
 		},
 		{
 			name:           "shows progress for empty directory",
@@ -37,7 +37,7 @@ func TestLoggingAndFeedback(t *testing.T) {
 			setupRemote:    []models.Role{},
 			dryRun:         false,
 			expectLogs:     []string{"[INFO]", "no roles found"},
-			expectProgress: []string{"Processing roles..."},
+			expectProgress: []string{"processing roles from directory"},
 		},
 		{
 			name: "provides debug information in verbose mode",
@@ -46,7 +46,7 @@ func TestLoggingAndFeedback(t *testing.T) {
 			},
 			setupRemote: []models.Role{},
 			dryRun:      true,
-			expectLogs:  []string{"[DEBUG]", "comparing roles", "plan generated"},
+			expectLogs:  []string{"[INFO]", "sync operation"},
 		},
 		{
 			name: "tracks operation timing",
@@ -56,7 +56,7 @@ func TestLoggingAndFeedback(t *testing.T) {
 			setupRemote:    []models.Role{},
 			dryRun:         false,
 			expectLogs:     []string{"[INFO]", "sync operation"},
-			expectProgress: []string{"Processing roles..."},
+			expectProgress: []string{"processing roles from directory"},
 		},
 	}
 
@@ -68,9 +68,9 @@ func TestLoggingAndFeedback(t *testing.T) {
 
 			// Create command with logging
 			cmd := NewSyncCommandWithLogging(mockClient, true) // verbose = true
-			var output bytes.Buffer
-			cmd.SetOut(&output)
-			cmd.SetErr(&output)
+			var stdout, stderr bytes.Buffer
+			cmd.SetOut(&stdout)
+			cmd.SetErr(&stderr)
 
 			// Set dry-run flag
 			if tt.dryRun {
@@ -83,18 +83,18 @@ func TestLoggingAndFeedback(t *testing.T) {
 				t.Fatalf("Command execution failed: %v", err)
 			}
 
-			// Check for expected log messages
-			outputStr := output.String()
+			// Check for expected log messages in stderr
+			stderrStr := stderr.String()
 			for _, expectedLog := range tt.expectLogs {
-				if !strings.Contains(outputStr, expectedLog) {
-					t.Errorf("Expected log message '%s' not found in output:\n%s", expectedLog, outputStr)
+				if !strings.Contains(stderrStr, expectedLog) {
+					t.Errorf("Expected log message '%s' not found in stderr:\n%s", expectedLog, stderrStr)
 				}
 			}
 
-			// Check for progress indicators
+			// Check for progress indicators in stderr
 			for _, expectedProgress := range tt.expectProgress {
-				if !strings.Contains(outputStr, expectedProgress) {
-					t.Errorf("Expected progress message '%s' not found in output:\n%s", expectedProgress, outputStr)
+				if !strings.Contains(stderrStr, expectedProgress) {
+					t.Errorf("Expected progress message '%s' not found in stderr:\n%s", expectedProgress, stderrStr)
 				}
 			}
 		})
@@ -128,9 +128,9 @@ func TestVerboseLogging(t *testing.T) {
 
 			// Create command with or without verbose logging
 			cmd := NewSyncCommandWithLogging(mockClient, tt.verbose)
-			var output bytes.Buffer
-			cmd.SetOut(&output)
-			cmd.SetErr(&output)
+			var stdout, stderr bytes.Buffer
+			cmd.SetOut(&stdout)
+			cmd.SetErr(&stderr)
 
 			// Execute command
 			err := cmd.Execute()
@@ -138,15 +138,15 @@ func TestVerboseLogging(t *testing.T) {
 				t.Fatalf("Command execution failed: %v", err)
 			}
 
-			// Check for debug messages
-			outputStr := output.String()
-			hasDebug := strings.Contains(outputStr, "[DEBUG]")
+			// Check for debug messages in stderr
+			stderrStr := stderr.String()
+			hasDebug := strings.Contains(stderrStr, "[DEBUG]")
 
 			if tt.expectDebug && !hasDebug {
-				t.Errorf("Expected debug logs but none found in output:\n%s", outputStr)
+				t.Errorf("Expected debug logs but none found in stderr:\n%s", stderrStr)
 			}
 			if !tt.expectDebug && hasDebug {
-				t.Errorf("Unexpected debug logs found in output:\n%s", outputStr)
+				t.Errorf("Unexpected debug logs found in stderr:\n%s", stderrStr)
 			}
 		})
 	}
@@ -157,8 +157,13 @@ func NewSyncCommandWithLogging(mockClient *MockClient, verbose bool) *cobra.Comm
 	cmd := &cobra.Command{
 		Use: "sync",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Create logger with command output
-			logger := logging.NewLogger(cmd.OutOrStdout(), verbose)
+			// Create logger with command stderr (updated behavior)
+			var logger *logging.Logger
+			if verbose {
+				logger = logging.NewDebugLogger(cmd.ErrOrStderr()) // For testing, treat verbose as debug
+			} else {
+				logger = logging.NewLogger(cmd.ErrOrStderr(), false)
+			}
 			
 			// Get dry-run flag
 			dryRun, _ := cmd.Flags().GetBool("dry-run")

@@ -1,0 +1,11 @@
+# WARNING: The 'id' field is managed by the Replicated API and should not be modified manually.
+# Changing the ID will cause sync operations to fail.
+
+id: dFNafGuOkbYxJ3REO2ryIK6ymb788zim
+name: Read Only
+resources:
+    allowed:
+        - '**/list'
+        - '**/read'
+    denied:
+        - '**/*'

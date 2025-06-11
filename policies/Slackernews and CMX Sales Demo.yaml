@@ -1,0 +1,21 @@
+# WARNING: The 'id' field is managed by the Replicated API and should not be modified manually.
+# Changing the ID will cause sync operations to fail.
+
+id: uGIHQTXXZj4IzJ64WQxmg3gnzifmjY2y
+name: Slackernews and CMX Sales Demo
+resources:
+    allowed:
+        - kots/app/2Ukd6bgLamUYOegqsNOPfjpfQVC/read
+        - kots/app/2Ukd6bgLamUYOegqsNOPfjpfQVC/license/**
+        - kots/app/2Ukd6bgLamUYOegqsNOPfjpfQVC/channel/*/read
+        - kots/app/2Ukd6bgLamUYOegqsNOPfjpfQVC/channel/*/releases/**
+        - kots/app/2Ukd6bgLamUYOegqsNOPfjpfQVC/licensefields/*/read
+        - kots/app/2Ukd6bgLamUYOegqsNOPfjpfQVC/license/*/read
+        - kots/app/2Ukd6bgLamUYOegqsNOPfjpfQVC/license/*/slack-notifications/read
+        - kots/app/2Ukd6bgLamUYOegqsNOPfjpfQVC/release/*/read
+        - kots/app/2Ukd6bgLamUYOegqsNOPfjpfQVC/supportbundle/read
+        - kots/app/2Ukd6bgLamUYOegqsNOPfjpfQVC/customhostname/list
+        - kots/cluster/**
+        - kots/vm/**
+        - kots/license/**
+    denied: []

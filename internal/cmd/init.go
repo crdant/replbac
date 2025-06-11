@@ -16,6 +16,8 @@ import (
 var (
 	initOutputDir string
 	initForce     bool
+	initVerbose   bool
+	initDebug     bool
 )
 
 // initCmd represents the init command
@@ -45,6 +47,8 @@ func init() {
 	// Init-specific flags
 	initCmd.Flags().StringVar(&initOutputDir, "output-dir", "", "directory to create role files (default: current directory)")
 	initCmd.Flags().BoolVar(&initForce, "force", false, "overwrite existing files")
+	initCmd.Flags().BoolVar(&initVerbose, "verbose", false, "enable info-level logging to stderr (progress and results)")
+	initCmd.Flags().BoolVar(&initDebug, "debug", false, "enable debug-level logging to stderr (detailed operation info)")
 }
 
 // InitResult contains the results of init operation
@@ -57,12 +61,13 @@ type InitResult struct {
 
 // RunInitCommand implements the main init logic with comprehensive error handling
 func RunInitCommand(cmd *cobra.Command, args []string, config models.Config, force bool, outputDir string) error {
-	// Create logger
-	verbose := false
-	if cmd.Flags().Lookup("verbose") != nil {
-		verbose, _ = cmd.Flags().GetBool("verbose")
+	// Create logger that outputs to stderr
+	var logger *logging.Logger
+	if initDebug {
+		logger = logging.NewDebugLogger(cmd.ErrOrStderr())
+	} else {
+		logger = logging.NewLogger(cmd.ErrOrStderr(), initVerbose)
 	}
-	logger := logging.NewLogger(cmd.OutOrStdout(), verbose)
 	
 	// Determine target directory
 	targetDir := "."

@@ -20,6 +20,7 @@ var (
 	syncDiff     bool
 	syncRolesDir string
 	verbose      bool
+	debug        bool
 )
 
 // syncCmd represents the sync command
@@ -34,7 +35,12 @@ The sync operation will:
 • Read all role YAML files from the specified directory
 • Compare them with existing roles in the API
 • Create, update, or delete roles as needed to match local state
-• Provide detailed feedback on all operations performed
+• Show clean results on stdout, with errors and progress on stderr
+
+Logging levels (to stderr):
+• Default: ERROR level only (quiet operation)
+• --verbose: INFO level (progress and results)  
+• --debug: DEBUG level (detailed operation info)
 
 Use --dry-run to preview changes without applying them, or --diff 
 for enhanced reporting with detailed diffs showing exactly what will change.`,
@@ -53,17 +59,28 @@ func init() {
 	syncCmd.Flags().BoolVar(&syncDryRun, "dry-run", false, "preview changes without applying them")
 	syncCmd.Flags().BoolVar(&syncDiff, "diff", false, "preview changes with detailed diffs (implies --dry-run)")
 	syncCmd.Flags().StringVar(&syncRolesDir, "roles-dir", "", "directory containing role YAML files (default: current directory)")
-	syncCmd.Flags().BoolVar(&verbose, "verbose", false, "enable verbose logging with debug information")
+	syncCmd.Flags().BoolVar(&verbose, "verbose", false, "enable info-level logging to stderr (progress and results)")
+	syncCmd.Flags().BoolVar(&debug, "debug", false, "enable debug-level logging to stderr (detailed operation info)")
 }
 
 // RunSyncCommand implements the main sync logic with comprehensive error handling
 func RunSyncCommand(cmd *cobra.Command, args []string, config models.Config, dryRun bool, diff bool, rolesDir string) error {
-	// Check if verbose flag is available and create logger
+	// Create logger that outputs to stderr
 	verbose := false
+	debug := false
 	if cmd.Flags().Lookup("verbose") != nil {
 		verbose, _ = cmd.Flags().GetBool("verbose")
 	}
-	logger := logging.NewLogger(cmd.OutOrStdout(), verbose)
+	if cmd.Flags().Lookup("debug") != nil {
+		debug, _ = cmd.Flags().GetBool("debug")
+	}
+	
+	var logger *logging.Logger
+	if debug {
+		logger = logging.NewDebugLogger(cmd.ErrOrStderr())
+	} else {
+		logger = logging.NewLogger(cmd.ErrOrStderr(), verbose)
+	}
 	
 	// Pre-flight validation with logging
 	logger.Debug("validating configuration")
@@ -122,7 +139,7 @@ func RunSyncCommandWithLogging(cmd *cobra.Command, args []string, client api.Cli
 	}
 
 	// Load local roles with progress feedback
-	logger.Progress("Processing roles...")
+	logger.Info("processing roles from directory")
 	logger.Debug("loading roles from directory: %s", targetDir)
 	
 	loadResult, err := roles.LoadRolesFromDirectoryWithDetails(targetDir)
@@ -158,7 +175,7 @@ func RunSyncCommandWithLogging(cmd *cobra.Command, args []string, client api.Cli
 
 	// Get remote roles with progress feedback
 	if len(localRoles) > 0 {
-		logger.Progress("Synchronizing...")
+		logger.Info("synchronizing with remote API")
 	}
 	logger.Debug("fetching remote roles from API")
 
@@ -275,12 +292,22 @@ func RunSyncCommandWithLogging(cmd *cobra.Command, args []string, client api.Cli
 
 // RunSyncCommandWithClient implements the main sync logic with dependency injection
 func RunSyncCommandWithClient(cmd *cobra.Command, args []string, client api.ClientInterface, dryRun bool, rolesDir string) error {
-	// Create a simple logger for this function since it doesn't receive one
+	// Create a logger that outputs to stderr
 	verbose := false
+	debug := false
 	if cmd.Flags().Lookup("verbose") != nil {
 		verbose, _ = cmd.Flags().GetBool("verbose")
 	}
-	logger := logging.NewLogger(cmd.OutOrStdout(), verbose)
+	if cmd.Flags().Lookup("debug") != nil {
+		debug, _ = cmd.Flags().GetBool("debug")
+	}
+	
+	var logger *logging.Logger
+	if debug {
+		logger = logging.NewDebugLogger(cmd.ErrOrStderr())
+	} else {
+		logger = logging.NewLogger(cmd.ErrOrStderr(), verbose)
+	}
 	// Determine roles directory
 	targetDir := "."
 	if len(args) > 0 {
