@@ -65,7 +65,7 @@
 
 #### Step 10: Ergonomics and User Experience
 - [x] Rename `init` command to `pull` and add dry-run, confirm, and diff flags
-- [ ] Remove `--output-dir` flag and `--roles-dir` flags since we have a positional argument
+- [x] Remove `--output-dir` flag and `--roles-dir` flags since we have a positional argument
 - [ ] Use a flag to for whether to delete roles not in local YAML files (default to false)
 - [ ] Document environment variables in help alongside the equivalent CLI flags
 - [ ] Determine if we should make any of our package public
