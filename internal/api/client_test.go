@@ -96,6 +96,7 @@ func TestGetRoles(t *testing.T) {
 			}`,
 			expectedRoles: []models.Role{
 				{
+					ID:   "test-admin-id",
 					Name: "admin",
 					Resources: models.Resources{
 						Allowed: []string{"**/*"},
@@ -103,6 +104,7 @@ func TestGetRoles(t *testing.T) {
 					},
 				},
 				{
+					ID:   "test-viewer-id",
 					Name: "viewer",
 					Resources: models.Resources{
 						Allowed: []string{"kots/app/*/read"},
@@ -293,6 +295,7 @@ func TestCreateRole(t *testing.T) {
 
 func TestUpdateRole(t *testing.T) {
 	role := models.Role{
+		ID:   "test-role-id",
 		Name: "test-role",
 		Resources: models.Resources{
 			Allowed: []string{"kots/app/*/read", "kots/app/*/write"},
@@ -334,7 +337,7 @@ func TestUpdateRole(t *testing.T) {
 				if r.Method != http.MethodPut {
 					t.Errorf("Expected PUT request, got %s", r.Method)
 				}
-				expectedPath := "/vendor/v3/policy/" + role.Name
+				expectedPath := "/vendor/v3/policy/" + role.ID
 				if r.URL.Path != expectedPath {
 					t.Errorf("Expected path %s, got %s", expectedPath, r.URL.Path)
 				}
@@ -390,18 +393,41 @@ func TestDeleteRole(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			requestCount := 0
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				// Verify request method and path
-				if r.Method != http.MethodDelete {
-					t.Errorf("Expected DELETE request, got %s", r.Method)
-				}
-				expectedPath := "/vendor/v3/policy/" + tt.roleName
-				if r.URL.Path != expectedPath {
-					t.Errorf("Expected path %s, got %s", expectedPath, r.URL.Path)
-				}
+				requestCount++
+				
+				if requestCount == 1 {
+					// First request: GET /vendor/v3/policies to look up ID
+					if r.Method != http.MethodGet {
+						t.Errorf("Expected GET request for policy lookup, got %s", r.Method)
+					}
+					if r.URL.Path != "/vendor/v3/policies" {
+						t.Errorf("Expected path /vendor/v3/policies, got %s", r.URL.Path)
+					}
+					
+					// Return policy list with the role
+					if tt.roleName == "test-role" {
+						w.WriteHeader(http.StatusOK)
+						w.Write([]byte(`{"policies": [{"id": "test-role-id", "name": "test-role", "definition": "{}"}]}`))
+					} else {
+						// Role not found in lookup
+						w.WriteHeader(http.StatusOK)
+						w.Write([]byte(`{"policies": []}`))
+					}
+				} else {
+					// Second request: DELETE /vendor/v3/policy/{id}
+					if r.Method != http.MethodDelete {
+						t.Errorf("Expected DELETE request, got %s", r.Method)
+					}
+					expectedPath := "/vendor/v3/policy/test-role-id"
+					if r.URL.Path != expectedPath {
+						t.Errorf("Expected path %s, got %s", expectedPath, r.URL.Path)
+					}
 
-				w.WriteHeader(tt.mockStatusCode)
-				w.Write([]byte(tt.mockResponse))
+					w.WriteHeader(tt.mockStatusCode)
+					w.Write([]byte(tt.mockResponse))
+				}
 			}))
 			defer server.Close()
 
@@ -449,6 +475,7 @@ func TestGetRole(t *testing.T) {
 				}
 			}`,
 			expectedRole: models.Role{
+				ID:   "admin-id",
 				Name: "admin",
 				Resources: models.Resources{
 					Allowed: []string{"**/*"},
@@ -468,17 +495,23 @@ func TestGetRole(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				// Verify request method and path
+				// Verify request method and path  
 				if r.Method != http.MethodGet {
 					t.Errorf("Expected GET request, got %s", r.Method)
 				}
-				expectedPath := "/vendor/v3/policy/" + tt.roleName
-				if r.URL.Path != expectedPath {
-					t.Errorf("Expected path %s, got %s", expectedPath, r.URL.Path)
+				if r.URL.Path != "/vendor/v3/policies" {
+					t.Errorf("Expected path /vendor/v3/policies, got %s", r.URL.Path)
 				}
 
-				w.WriteHeader(tt.mockStatusCode)
-				w.Write([]byte(tt.mockResponse))
+				// Return policy list
+				if tt.roleName == "admin" {
+					w.WriteHeader(http.StatusOK)
+					w.Write([]byte(`{"policies": [{"id": "admin-id", "name": "admin", "definition": "{\"v1\":{\"name\":\"admin\",\"resources\":{\"allowed\":[\"**/*\"],\"denied\":[\"kots/app/*/delete\"]}}}"}]}`))
+				} else {
+					// Role not found
+					w.WriteHeader(http.StatusOK)
+					w.Write([]byte(`{"policies": []}`))
+				}
 			}))
 			defer server.Close()
 
