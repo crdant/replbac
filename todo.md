@@ -63,19 +63,26 @@
 - [x] Comprehensive logging system
 - [x] Production readiness improvements
 
+#### Step 10: Ergonomics and User Experience
+- [ ] Rename `init` command to `pull` and add dry-run, confirm, and diff flags
+- [ ] Use a flag to for whether to delete roles not in local YAML files (default to false)
+- [ ] Add man page
+- [ ] Remove `--output-dir` flag and add `--roles-dir` flag since we have a positional argument
+- [ ] Document environment variables in help alongside the equivalent CLI flags
+- [ ] Determine if we should make any of our package public
 
-#### Step 10: Build System and Integration
+#### Step 11: Build System and Integration
 - [ ] Complete Makefile with all targets
 - [ ] Add comprehensive integration tests
 - [ ] Cross-platform build support
 - [ ] Final documentation and security review
 
-#### Step 11: CI/CD Implementation
+#### Step 12: CI/CD Implementation
 - [ ] Implement format, lint, test, and build pipeline for all commits
 - [ ] Add pull request checks and status badges
 - [ ] Implement SLSA compliant release pipeline
 
-#### Step 12: Performance Optimization
+#### Step 13: Performance Optimization
 - [ ] Performance optimizations
 
 ### Notes
