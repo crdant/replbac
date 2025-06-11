@@ -228,9 +228,25 @@ func (c *Client) UpdateRole(role models.Role) error {
 
 // DeleteRole deletes a role by name via the API
 func (c *Client) DeleteRole(roleName string) error {
-	// Note: This method still uses name for compatibility, but in practice
-	// we should look up by ID. For now, this will work for testing.
-	url := c.baseURL + "/vendor/v3/policy/" + roleName
+	// Find the policy ID by name
+	policies, err := c.getPolicies()
+	if err != nil {
+		return fmt.Errorf("failed to fetch policies: %w", err)
+	}
+	
+	var policyID string
+	for _, policy := range policies {
+		if policy.Name == roleName {
+			policyID = policy.ID
+			break
+		}
+	}
+	
+	if policyID == "" {
+		return fmt.Errorf("role not found: %s", roleName)
+	}
+	
+	url := c.baseURL + "/vendor/v3/policy/" + policyID
 
 	req, err := http.NewRequest(http.MethodDelete, url, nil)
 	if err != nil {
