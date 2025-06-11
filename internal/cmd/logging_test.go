@@ -169,7 +169,7 @@ func NewSyncCommandWithLogging(mockClient *MockClient, verbose bool) *cobra.Comm
 				Confirm:     false,
 				LogLevel:    "info",
 			}
-			return RunSyncCommandWithLogging(cmd, args, mockClient, dryRun, "", logger, config)
+			return RunSyncCommandWithLogging(cmd, args, mockClient, dryRun, false, "", logger, config)
 		},
 	}
 	

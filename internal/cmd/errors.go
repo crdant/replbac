@@ -44,10 +44,12 @@ func CreateEnhancedSyncCommand(config models.Config) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Get flag values
 			dryRun, _ := cmd.Flags().GetBool("dry-run")
+			dryRunDetailed, _ := cmd.Flags().GetBool("dry-run-detailed")
 			rolesDir, _ := cmd.Flags().GetString("roles-dir")
 			
 			// Use the unified sync command which now includes enhanced error handling
-			return RunSyncCommand(cmd, args, config, dryRun, rolesDir)
+			effectiveDryRun := dryRun || dryRunDetailed
+			return RunSyncCommand(cmd, args, config, effectiveDryRun, dryRunDetailed, rolesDir)
 		},
 	}
 	
