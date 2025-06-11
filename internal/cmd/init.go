@@ -2,8 +2,14 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/spf13/cobra"
+
+	"replbac/internal/api"
+	"replbac/internal/models"
+	"replbac/internal/roles"
 )
 
 var (
@@ -28,25 +34,7 @@ The init operation will:
 Use --force to overwrite existing files.`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// Determine output directory
-		outputDir := "."
-		if len(args) > 0 {
-			outputDir = args[0]
-		}
-		if initOutputDir != "" {
-			outputDir = initOutputDir
-		}
-		
-		fmt.Printf("Initializing role files in directory: %s\n", outputDir)
-		
-		if initForce {
-			fmt.Println("FORCE: Existing files will be overwritten")
-		}
-		
-		// TODO: Implement actual init logic
-		fmt.Println("Init functionality will be implemented in a future step")
-		
-		return nil
+		return RunInitCommand(cmd, args, cfg, initForce, initOutputDir)
 	},
 }
 
@@ -56,4 +44,106 @@ func init() {
 	// Init-specific flags
 	initCmd.Flags().StringVar(&initOutputDir, "output-dir", "", "directory to create role files (default: current directory)")
 	initCmd.Flags().BoolVar(&initForce, "force", false, "overwrite existing files")
+}
+
+// InitResult contains the results of init operation
+type InitResult struct {
+	Created     int
+	Skipped     int
+	Overwritten int
+	Total       int
+}
+
+// RunInitCommand implements the main init logic with comprehensive error handling
+func RunInitCommand(cmd *cobra.Command, args []string, config models.Config, force bool, outputDir string) error {
+	// Determine target directory
+	targetDir := "."
+	if len(args) > 0 {
+		targetDir = args[0]
+	}
+	if outputDir != "" {
+		targetDir = outputDir
+	}
+
+	cmd.Printf("Initializing role files in directory: %s\n", targetDir)
+	
+	if force {
+		cmd.Println("FORCE: Existing files will be overwritten")
+	}
+
+	// Create API client
+	client, err := api.NewClient(config.APIEndpoint, config.APIToken)
+	if err != nil {
+		return fmt.Errorf("failed to create API client: %w", err)
+	}
+	
+	return RunInitCommandWithClient(cmd, targetDir, force, client)
+}
+
+// RunInitCommandWithClient implements init with dependency injection for testing
+func RunInitCommandWithClient(cmd *cobra.Command, outputDir string, force bool, client api.ClientInterface) error {
+	// Fetch roles from API
+	apiRoles, err := client.GetRoles()
+	if err != nil {
+		cmd.Printf("Failed to fetch roles from API: %v\n", err)
+		return fmt.Errorf("failed to fetch roles from API: %w", err)
+	}
+
+	if len(apiRoles) == 0 {
+		cmd.Println("No roles found in API")
+		cmd.Println("Initialization completed: no files created")
+		return nil
+	}
+
+	cmd.Printf("Downloaded %d role(s) from API\n", len(apiRoles))
+
+	// Initialize result tracking
+	result := InitResult{Total: len(apiRoles)}
+
+	// Create output directory if it doesn't exist
+	if err := os.MkdirAll(outputDir, 0755); err != nil {
+		return fmt.Errorf("failed to create output directory: %w", err)
+	}
+
+	// Write role files
+	for _, role := range apiRoles {
+		fileName := fmt.Sprintf("%s.yaml", role.Name)
+		filePath := filepath.Join(outputDir, fileName)
+
+		// Check if file exists
+		if _, err := os.Stat(filePath); err == nil {
+			// File exists
+			if force {
+				// Overwrite with force
+				if err := roles.WriteRoleFile(role, filePath); err != nil {
+					return fmt.Errorf("failed to write role file %s: %w", fileName, err)
+				}
+				cmd.Printf("Overwrote %s\n", filePath)
+				result.Overwritten++
+			} else {
+				// Skip existing file
+				cmd.Printf("Skipped %s (file already exists)\n", fileName)
+				result.Skipped++
+			}
+		} else if os.IsNotExist(err) {
+			// File doesn't exist, create it
+			if err := roles.WriteRoleFile(role, filePath); err != nil {
+				return fmt.Errorf("failed to write role file %s: %w", fileName, err)
+			}
+			cmd.Printf("Created %s\n", filePath)
+			result.Created++
+		} else {
+			// Other error checking file
+			return fmt.Errorf("failed to check file %s: %w", fileName, err)
+		}
+	}
+
+	// Display completion message
+	if result.Created > 0 && result.Skipped > 0 {
+		cmd.Printf("Initialization completed: %d created, %d skipped\n", result.Created, result.Skipped)
+	} else if result.Total > 0 {
+		cmd.Println("Initialization completed successfully")
+	}
+
+	return nil
 }

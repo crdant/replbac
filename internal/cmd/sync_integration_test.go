@@ -472,6 +472,9 @@ func NewMockClient(calls *MockAPICalls, roles []models.Role) *MockClient {
 // GetRoles returns the configured roles
 func (m *MockClient) GetRoles() ([]models.Role, error) {
 	m.calls.GetCalls++
+	if m.shouldError {
+		return nil, fmt.Errorf("API connection failed")
+	}
 	return m.roles, nil
 }
 

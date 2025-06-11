@@ -53,7 +53,7 @@
 - [x] Test complete workflows
 
 #### Step 8: Init/Bootstrap Command
-- [ ] Implement API-to-local sync (reverse direction)
+- [x] Implement API-to-local sync (reverse direction)
 - [ ] Add file generation from API roles
 - [ ] Handle conflicts and user prompts
 - [ ] Test round-trip compatibility
