@@ -403,7 +403,7 @@ func TestSyncCommandConfiguration(t *testing.T) {
 							APIEndpoint: "https://api.replicated.com",
 							APIToken:    "", // Empty token for this test
 						}
-						return RunSyncCommand(cmd, args, config, false, "")
+						return RunSyncCommand(cmd, args, config, false, false, "")
 					},
 				}
 			} else {

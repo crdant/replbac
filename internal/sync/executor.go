@@ -2,6 +2,8 @@ package sync
 
 import (
 	"fmt"
+	"sort"
+	"strings"
 
 	"replbac/internal/models"
 )
@@ -20,11 +22,12 @@ type Executor struct {
 
 // ExecutionResult represents the result of executing a sync plan
 type ExecutionResult struct {
-	Created int   // Number of roles created
-	Updated int   // Number of roles updated
-	Deleted int   // Number of roles deleted
-	Error   error // Error if execution failed
-	DryRun  bool  // Whether this was a dry run
+	Created      int    // Number of roles created
+	Updated      int    // Number of roles updated
+	Deleted      int    // Number of roles deleted
+	Error        error  // Error if execution failed
+	DryRun       bool   // Whether this was a dry run
+	DetailedInfo string // Detailed information about changes (for enhanced dry-run)
 }
 
 // NewExecutor creates a new sync executor with the given API client
@@ -83,6 +86,52 @@ func (e *Executor) ExecutePlanDryRun(plan SyncPlan) ExecutionResult {
 	return result
 }
 
+// ExecutePlanDryRunWithDiffs simulates executing a sync plan with detailed diff information
+func (e *Executor) ExecutePlanDryRunWithDiffs(plan SyncPlan) ExecutionResult {
+	result := ExecutionResult{
+		Created: len(plan.Creates),
+		Updated: len(plan.Updates),
+		Deleted: len(plan.Deletes),
+		DryRun:  true,
+		Error:   nil,
+	}
+
+	// Generate detailed diff information
+	detailsBuilder := make([]string, 0)
+
+	// Add create details
+	for _, role := range plan.Creates {
+		detailsBuilder = append(detailsBuilder, 
+			fmt.Sprintf("CREATE: %s (allowed: %v, denied: %v)", 
+				role.Name, role.Resources.Allowed, role.Resources.Denied))
+	}
+
+	// Add update details with diffs
+	for _, update := range plan.Updates {
+		detailsBuilder = append(detailsBuilder, fmt.Sprintf("UPDATE: %s", update.Name))
+		
+		// Compare allowed resources
+		allowedDiff := generateResourceDiff("allowed", update.Remote.Resources.Allowed, update.Local.Resources.Allowed)
+		if allowedDiff != "" {
+			detailsBuilder = append(detailsBuilder, fmt.Sprintf("  %s", allowedDiff))
+		}
+		
+		// Compare denied resources
+		deniedDiff := generateResourceDiff("denied", update.Remote.Resources.Denied, update.Local.Resources.Denied)
+		if deniedDiff != "" {
+			detailsBuilder = append(detailsBuilder, fmt.Sprintf("  %s", deniedDiff))
+		}
+	}
+
+	// Add delete details
+	for _, roleName := range plan.Deletes {
+		detailsBuilder = append(detailsBuilder, fmt.Sprintf("DELETE: %s", roleName))
+	}
+
+	result.DetailedInfo = strings.Join(detailsBuilder, "\n")
+	return result
+}
+
 // Summary returns a human-readable summary of the execution result
 func (r ExecutionResult) Summary() string {
 	if r.Error != nil {
@@ -133,4 +182,77 @@ func (r ExecutionResult) HasChanges() bool {
 // IsSuccess returns true if the execution completed without error
 func (r ExecutionResult) IsSuccess() bool {
 	return r.Error == nil
+}
+
+// DetailedSummary returns a human-readable summary with detailed information when available
+func (r ExecutionResult) DetailedSummary() string {
+	// Start with basic summary
+	summary := r.Summary()
+	
+	// If we have detailed information, append it
+	if r.DetailedInfo != "" {
+		summary += "\n\nDetails:\n" + r.DetailedInfo
+	}
+	
+	return summary
+}
+
+// generateResourceDiff generates a diff string showing changes between old and new resource lists
+func generateResourceDiff(resourceType string, oldResources, newResources []string) string {
+	// Normalize slices (handle nil as empty)
+	if oldResources == nil {
+		oldResources = []string{}
+	}
+	if newResources == nil {
+		newResources = []string{}
+	}
+
+	// Create maps for efficient lookup
+	oldMap := make(map[string]bool)
+	newMap := make(map[string]bool)
+	
+	for _, resource := range oldResources {
+		oldMap[resource] = true
+	}
+	for _, resource := range newResources {
+		newMap[resource] = true
+	}
+
+	// Find additions and removals
+	var additions, removals []string
+	
+	// Check for additions (in new but not in old)
+	for resource := range newMap {
+		if !oldMap[resource] {
+			additions = append(additions, resource)
+		}
+	}
+	
+	// Check for removals (in old but not in new)
+	for resource := range oldMap {
+		if !newMap[resource] {
+			removals = append(removals, resource)
+		}
+	}
+
+	// Sort for consistent output
+	sort.Strings(additions)
+	sort.Strings(removals)
+
+	// Build diff string
+	var diffParts []string
+	
+	if len(additions) > 0 {
+		for _, addition := range additions {
+			diffParts = append(diffParts, fmt.Sprintf("+ %s: %s", resourceType, addition))
+		}
+	}
+	
+	if len(removals) > 0 {
+		for _, removal := range removals {
+			diffParts = append(diffParts, fmt.Sprintf("- %s: %s", resourceType, removal))
+		}
+	}
+
+	return strings.Join(diffParts, "\n")
 }

@@ -524,6 +524,243 @@ func TestNewExecutor(t *testing.T) {
 	}
 }
 
+func TestExecutor_ExecutePlanDryRunWithDiffs(t *testing.T) {
+	tests := []struct {
+		name              string
+		plan              SyncPlan
+		wantDetailedInfo  bool
+		wantCreateDetails []string
+		wantUpdateDetails []string
+		wantDeleteDetails []string
+	}{
+		{
+			name: "dry run with detailed create information",
+			plan: SyncPlan{
+				Creates: []models.Role{
+					{
+						Name: "new-admin",
+						Resources: models.Resources{
+							Allowed: []string{"*", "admin:*"},
+							Denied:  []string{"sensitive:delete"},
+						},
+					},
+				},
+				Updates: []RoleUpdate{},
+				Deletes: []string{},
+			},
+			wantDetailedInfo: true,
+			wantCreateDetails: []string{
+				"new-admin",
+				"allowed: [* admin:*]",
+				"denied: [sensitive:delete]",
+			},
+		},
+		{
+			name: "dry run with detailed update information",
+			plan: SyncPlan{
+				Creates: []models.Role{},
+				Updates: []RoleUpdate{
+					{
+						Name: "editor",
+						Local: models.Role{
+							Name: "editor",
+							Resources: models.Resources{
+								Allowed: []string{"read", "write", "create"},
+								Denied:  []string{"delete"},
+							},
+						},
+						Remote: models.Role{
+							Name: "editor",
+							Resources: models.Resources{
+								Allowed: []string{"read", "write"},
+								Denied:  []string{},
+							},
+						},
+					},
+				},
+				Deletes: []string{},
+			},
+			wantDetailedInfo: true,
+			wantUpdateDetails: []string{
+				"editor",
+				"+ allowed: create",
+				"+ denied: delete",
+			},
+		},
+		{
+			name: "dry run with detailed delete information",
+			plan: SyncPlan{
+				Creates: []models.Role{},
+				Updates: []RoleUpdate{},
+				Deletes: []string{"deprecated-role", "old-service"},
+			},
+			wantDetailedInfo: true,
+			wantDeleteDetails: []string{
+				"deprecated-role",
+				"old-service",
+			},
+		},
+		{
+			name: "complex dry run with all operation types",
+			plan: SyncPlan{
+				Creates: []models.Role{
+					{
+						Name: "new-viewer",
+						Resources: models.Resources{
+							Allowed: []string{"read:*"},
+							Denied:  []string{},
+						},
+					},
+				},
+				Updates: []RoleUpdate{
+					{
+						Name: "service-account",
+						Local: models.Role{
+							Name: "service-account",
+							Resources: models.Resources{
+								Allowed: []string{"api:read", "api:write"},
+								Denied:  []string{"admin:*"},
+							},
+						},
+						Remote: models.Role{
+							Name: "service-account",
+							Resources: models.Resources{
+								Allowed: []string{"api:read"},
+								Denied:  []string{},
+							},
+						},
+					},
+				},
+				Deletes: []string{"unused-role"},
+			},
+			wantDetailedInfo: true,
+			wantCreateDetails: []string{"new-viewer", "allowed: [read:*]"},
+			wantUpdateDetails: []string{"service-account", "+ allowed: api:write", "+ denied: admin:*"},
+			wantDeleteDetails: []string{"unused-role"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockClient := &MockAPIClient{}
+			executor := NewExecutor(mockClient)
+			
+			result := executor.ExecutePlanDryRunWithDiffs(tt.plan)
+
+			// Verify it's a dry run
+			if !result.DryRun {
+				t.Errorf("ExecutePlanDryRunWithDiffs() result.DryRun = %v, want true", result.DryRun)
+			}
+
+			// Verify no actual API calls were made
+			if len(mockClient.CreatedRoles) != 0 || len(mockClient.UpdatedRoles) != 0 || len(mockClient.DeletedRoles) != 0 {
+				t.Errorf("ExecutePlanDryRunWithDiffs() made API calls in dry run mode")
+			}
+
+			// Verify result has detailed information
+			if tt.wantDetailedInfo && result.DetailedInfo == "" {
+				t.Errorf("ExecutePlanDryRunWithDiffs() result.DetailedInfo is empty, want detailed information")
+			}
+
+			// Check create details
+			for _, detail := range tt.wantCreateDetails {
+				if !containsString(result.DetailedInfo, detail) {
+					t.Errorf("ExecutePlanDryRunWithDiffs() result.DetailedInfo missing create detail: %s", detail)
+				}
+			}
+
+			// Check update details
+			for _, detail := range tt.wantUpdateDetails {
+				if !containsString(result.DetailedInfo, detail) {
+					t.Errorf("ExecutePlanDryRunWithDiffs() result.DetailedInfo missing update detail: %s", detail)
+				}
+			}
+
+			// Check delete details
+			for _, detail := range tt.wantDeleteDetails {
+				if !containsString(result.DetailedInfo, detail) {
+					t.Errorf("ExecutePlanDryRunWithDiffs() result.DetailedInfo missing delete detail: %s", detail)
+				}
+			}
+		})
+	}
+}
+
+func TestExecutionResult_DetailedSummary(t *testing.T) {
+	tests := []struct {
+		name           string
+		result         ExecutionResult
+		wantContains   []string
+		wantNotContains []string
+	}{
+		{
+			name: "dry run with detailed info shows enhanced summary",
+			result: ExecutionResult{
+				Created:      1,
+				Updated:      1,
+				Deleted:      1,
+				DryRun:       true,
+				DetailedInfo: "CREATE: admin (allowed: [*], denied: [])\nUPDATE: editor\n+ allowed: write\nDELETE: obsolete",
+			},
+			wantContains: []string{
+				"Dry run: Would create 1 role(s), update 1 role(s), and delete 1 role(s)",
+				"CREATE: admin",
+				"UPDATE: editor",
+				"DELETE: obsolete",
+			},
+		},
+		{
+			name: "regular execution result without detailed info",
+			result: ExecutionResult{
+				Created:      2,
+				Updated:      0,
+				Deleted:      1,
+				DryRun:       false,
+				DetailedInfo: "",
+			},
+			wantContains: []string{
+				"create 2 role(s) and delete 1 role(s)",
+			},
+			wantNotContains: []string{
+				"CREATE:",
+				"UPDATE:",
+				"DELETE:",
+			},
+		},
+		{
+			name: "dry run with no changes",
+			result: ExecutionResult{
+				Created:      0,
+				Updated:      0,
+				Deleted:      0,
+				DryRun:       true,
+				DetailedInfo: "",
+			},
+			wantContains: []string{
+				"Dry run: No changes would be made",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			summary := tt.result.DetailedSummary()
+			
+			for _, want := range tt.wantContains {
+				if !containsString(summary, want) {
+					t.Errorf("DetailedSummary() = %q, want to contain %q", summary, want)
+				}
+			}
+
+			for _, notWant := range tt.wantNotContains {
+				if containsString(summary, notWant) {
+					t.Errorf("DetailedSummary() = %q, should not contain %q", summary, notWant)
+				}
+			}
+		})
+	}
+}
+
 // Helper function to check if a string contains a substring
 func containsString(s, substr string) bool {
 	return len(s) >= len(substr) && 
