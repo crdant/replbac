@@ -162,14 +162,6 @@ func TestFlagParsing(t *testing.T) {
 			args: []string{"sync", "--dry-run"},
 		},
 		{
-			name: "sync with roles-dir flag",
-			args: []string{"sync", "--roles-dir", "/tmp/roles"},
-		},
-		{
-			name: "pull with roles-dir flag",
-			args: []string{"pull", "--roles-dir", "/tmp/output"},
-		},
-		{
 			name: "pull with force flag",
 			args: []string{"pull", "--force"},
 		},
@@ -204,8 +196,6 @@ func createTestRootCmd() *cobra.Command {
 	confirm = false
 	logLevel = ""
 	syncDryRun = false
-	syncRolesDir = ""
-	pullRolesDir = ""
 	pullForce = false
 
 	// Create new command tree
@@ -229,24 +219,24 @@ and the Replicated platform.`,
 	cmd.AddCommand(versionCmd)
 	
 	syncTestCmd := &cobra.Command{
-		Use:   "sync",
+		Use:   "sync [directory]",
 		Short: "Synchronize local role files to Replicated API",
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return nil
 		},
 	}
 	syncTestCmd.Flags().BoolVar(&syncDryRun, "dry-run", false, "preview changes")
-	syncTestCmd.Flags().StringVar(&syncRolesDir, "roles-dir", "", "roles directory")
 	cmd.AddCommand(syncTestCmd)
 
 	pullTestCmd := &cobra.Command{
-		Use:   "pull",
+		Use:   "pull [directory]",
 		Short: "Pull role definitions from Replicated API to local files",
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return nil
 		},
 	}
-	pullTestCmd.Flags().StringVar(&pullRolesDir, "roles-dir", "", "roles directory")
 	pullTestCmd.Flags().BoolVar(&pullForce, "force", false, "overwrite existing files")
 	cmd.AddCommand(pullTestCmd)
 

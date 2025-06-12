@@ -85,29 +85,6 @@ func TestPullCommand(t *testing.T) {
 			},
 		},
 		{
-			name:  "pull with roles-dir flag",
-			args:  []string{},
-			flags: map[string]string{"roles-dir": "roles"},
-			mockAPIRoles: []models.Role{
-				{
-					Name: "admin",
-					Resources: models.Resources{
-						Allowed: []string{"*"},
-						Denied:  []string{},
-					},
-				},
-			},
-			expectError: false,
-			expectOutput: []string{
-				"Downloaded 1 role(s) from API",
-				"Created roles/admin.yaml",
-				"Pull completed successfully",
-			},
-			expectFiles: map[string]string{
-				"roles/admin.yaml": "name: admin\nresources:\n    allowed:\n        - '*'\n    denied: []\n",
-			},
-		},
-		{
 			name: "pull with existing files - preserves without force",
 			args: []string{},
 			mockAPIRoles: []models.Role{
@@ -355,16 +332,12 @@ func NewPullCommand(mockClient *MockClient) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			dryRun, _ := cmd.Flags().GetBool("dry-run")
 			diff, _ := cmd.Flags().GetBool("diff")
-			rolesDir, _ := cmd.Flags().GetString("roles-dir")
 			force, _ := cmd.Flags().GetBool("force")
 			
 			// Determine target directory
 			targetDir := "."
 			if len(args) > 0 {
 				targetDir = args[0]
-			}
-			if rolesDir != "" {
-				targetDir = rolesDir
 			}
 			
 			// If diff is enabled, enable dry-run too
@@ -376,7 +349,6 @@ func NewPullCommand(mockClient *MockClient) *cobra.Command {
 	
 	cmd.Flags().Bool("dry-run", false, "preview changes without applying them")
 	cmd.Flags().Bool("diff", false, "preview changes with detailed diffs (implies --dry-run)")
-	cmd.Flags().String("roles-dir", "", "directory to create role files (default: current directory)")
 	cmd.Flags().Bool("force", false, "overwrite existing files")
 	cmd.Flags().Bool("verbose", false, "enable verbose logging")
 	

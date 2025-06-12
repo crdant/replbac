@@ -150,7 +150,7 @@ resources:
 			},
 		},
 		{
-			name: "sync with roles-dir flag",
+			name: "sync with positional directory argument",
 			files: map[string]string{
 				"special/flagged.yaml": `name: flagged
 resources:
@@ -158,10 +158,7 @@ resources:
   denied: []`,
 			},
 			mockAPIRoles: []models.Role{},
-			args:         []string{},
-			flags: map[string]string{
-				"roles-dir": "special",
-			},
+			args:         []string{"special"},
 			expectError: false,
 			expectOutput: []string{
 				"Synchronizing roles from directory: special",
@@ -406,7 +403,7 @@ func TestSyncCommandConfiguration(t *testing.T) {
 							APIEndpoint: "https://api.replicated.com",
 							APIToken:    "", // Empty token for this test
 						}
-						return RunSyncCommand(cmd, args, config, false, false, "")
+						return RunSyncCommand(cmd, args, config, false, false)
 					},
 				}
 			} else {
@@ -598,9 +595,8 @@ func NewSyncCommand(mockClient *MockClient) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Get flag values
 			dryRun, _ := cmd.Flags().GetBool("dry-run")
-			rolesDir, _ := cmd.Flags().GetString("roles-dir")
 			
-			return RunSyncCommandWithClient(cmd, args, mockClient, dryRun, rolesDir)
+			return RunSyncCommandWithClient(cmd, args, mockClient, dryRun)
 		},
 	}
 	

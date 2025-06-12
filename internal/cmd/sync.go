@@ -18,7 +18,6 @@ import (
 var (
 	syncDryRun   bool
 	syncDiff     bool
-	syncRolesDir string
 	verbose      bool
 	debug        bool
 )
@@ -48,7 +47,7 @@ for enhanced reporting with detailed diffs showing exactly what will change.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// If diff is enabled, enable dry-run too
 		effectiveDryRun := syncDryRun || syncDiff
-		return RunSyncCommand(cmd, args, cfg, effectiveDryRun, syncDiff, syncRolesDir)
+		return RunSyncCommand(cmd, args, cfg, effectiveDryRun, syncDiff)
 	},
 }
 
@@ -58,13 +57,12 @@ func init() {
 	// Sync-specific flags
 	syncCmd.Flags().BoolVar(&syncDryRun, "dry-run", false, "preview changes without applying them")
 	syncCmd.Flags().BoolVar(&syncDiff, "diff", false, "preview changes with detailed diffs (implies --dry-run)")
-	syncCmd.Flags().StringVar(&syncRolesDir, "roles-dir", "", "directory containing role YAML files (default: current directory)")
 	syncCmd.Flags().BoolVar(&verbose, "verbose", false, "enable info-level logging to stderr (progress and results)")
 	syncCmd.Flags().BoolVar(&debug, "debug", false, "enable debug-level logging to stderr (detailed operation info)")
 }
 
 // RunSyncCommand implements the main sync logic with comprehensive error handling
-func RunSyncCommand(cmd *cobra.Command, args []string, config models.Config, dryRun bool, diff bool, rolesDir string) error {
+func RunSyncCommand(cmd *cobra.Command, args []string, config models.Config, dryRun bool, diff bool) error {
 	// Ensure command output goes to stdout and logs go to stderr (unless already set for testing)
 	if cmd.OutOrStdout() == os.Stderr {
 		cmd.SetOut(os.Stdout)
@@ -102,9 +100,6 @@ func RunSyncCommand(cmd *cobra.Command, args []string, config models.Config, dry
 	if len(args) > 0 {
 		targetDir = args[0]
 	}
-	if rolesDir != "" {
-		targetDir = rolesDir
-	}
 
 	logger.Debug("validating directory access: %s", targetDir)
 	// Validate directory access
@@ -122,18 +117,15 @@ func RunSyncCommand(cmd *cobra.Command, args []string, config models.Config, dry
 	}
 	
 	// Use the enhanced logging version
-	return RunSyncCommandWithLogging(cmd, args, client, dryRun, diff, rolesDir, logger, config)
+	return RunSyncCommandWithLogging(cmd, args, client, dryRun, diff, logger, config)
 }
 
 // RunSyncCommandWithLogging implements sync with enhanced logging and user feedback
-func RunSyncCommandWithLogging(cmd *cobra.Command, args []string, client api.ClientInterface, dryRun bool, diff bool, rolesDir string, logger *logging.Logger, config models.Config) error {
+func RunSyncCommandWithLogging(cmd *cobra.Command, args []string, client api.ClientInterface, dryRun bool, diff bool, logger *logging.Logger, config models.Config) error {
 	// Determine roles directory
 	targetDir := "."
 	if len(args) > 0 {
 		targetDir = args[0]
-	}
-	if rolesDir != "" {
-		targetDir = rolesDir
 	}
 
 	cmd.Printf("Synchronizing roles from directory: %s\n", targetDir)
@@ -296,7 +288,7 @@ func RunSyncCommandWithLogging(cmd *cobra.Command, args []string, client api.Cli
 }
 
 // RunSyncCommandWithClient implements the main sync logic with dependency injection
-func RunSyncCommandWithClient(cmd *cobra.Command, args []string, client api.ClientInterface, dryRun bool, rolesDir string) error {
+func RunSyncCommandWithClient(cmd *cobra.Command, args []string, client api.ClientInterface, dryRun bool) error {
 	// Ensure command output goes to stdout and logs go to stderr (unless already set for testing)
 	if cmd.OutOrStdout() == os.Stderr {
 		cmd.SetOut(os.Stdout)
@@ -325,9 +317,6 @@ func RunSyncCommandWithClient(cmd *cobra.Command, args []string, client api.Clie
 	targetDir := "."
 	if len(args) > 0 {
 		targetDir = args[0]
-	}
-	if rolesDir != "" {
-		targetDir = rolesDir
 	}
 	
 	cmd.Printf("Synchronizing roles from directory: %s\n", targetDir)

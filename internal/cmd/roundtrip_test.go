@@ -449,7 +449,6 @@ func NewRoundTripSyncCommand(mockClient *MockClient) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			dryRun, _ := cmd.Flags().GetBool("dry-run")
-			rolesDir, _ := cmd.Flags().GetString("roles-dir")
 			confirm, _ := cmd.Flags().GetBool("confirm")
 			
 			// For round-trip tests, automatically confirm destructive operations
@@ -462,7 +461,7 @@ func NewRoundTripSyncCommand(mockClient *MockClient) *cobra.Command {
 			
 			// Use the logging version which supports confirmation
 			logger := logging.NewLogger(cmd.OutOrStdout(), false)
-			return RunSyncCommandWithLogging(cmd, args, mockClient, dryRun, false, rolesDir, logger, config)
+			return RunSyncCommandWithLogging(cmd, args, mockClient, dryRun, false, logger, config)
 		},
 	}
 	
