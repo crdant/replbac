@@ -5,6 +5,12 @@ import (
 	"fmt"
 )
 
+// Constants for hardcoded values
+const (
+	// ReplicatedAPIEndpoint is the hardcoded Replicated API endpoint
+	ReplicatedAPIEndpoint = "https://api.replicated.com"
+)
+
 // Resources represents the allowed and denied resources for a role
 type Resources struct {
 	Allowed []string `yaml:"allowed" json:"allowed"`
@@ -62,8 +68,7 @@ func (p Policy) ToRole() (Role, error) {
 
 // Config represents the application configuration
 type Config struct {
-	APIEndpoint string `yaml:"api_endpoint" json:"api_endpoint"`
-	APIToken    string `yaml:"api_token" json:"api_token"`
-	Confirm     bool   `yaml:"confirm" json:"confirm"`
-	LogLevel    string `yaml:"log_level" json:"log_level"`
+	APIToken string `yaml:"api_token" json:"api_token"`
+	Confirm  bool   `yaml:"confirm" json:"confirm"`
+	LogLevel string `yaml:"log_level" json:"log_level"`
 }

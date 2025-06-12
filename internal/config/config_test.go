@@ -22,38 +22,33 @@ func TestLoadConfig(t *testing.T) {
 		{
 			name: "default config when no sources provided",
 			expectedConfig: models.Config{
-				APIEndpoint: "https://api.replicated.com",
-				LogLevel:    "info",
-				Confirm:     false,
+				LogLevel: "info",
+				Confirm:  false,
 			},
 		},
 		{
 			name: "loads from environment variables",
 			envVars: map[string]string{
-				"REPLBAC_API_ENDPOINT": "https://custom.api.com",
-				"REPLBAC_API_TOKEN":    "test-token",
-				"REPLBAC_LOG_LEVEL":    "debug",
-				"REPLBAC_CONFIRM":      "true",
+				"REPLBAC_API_TOKEN": "test-token",
+				"REPLBAC_LOG_LEVEL": "debug",
+				"REPLBAC_CONFIRM":   "true",
 			},
 			expectedConfig: models.Config{
-				APIEndpoint: "https://custom.api.com",
-				APIToken:    "test-token",
-				LogLevel:    "debug",
-				Confirm:     true,
+				APIToken: "test-token",
+				LogLevel: "debug",
+				Confirm:  true,
 			},
 		},
 		{
 			name:       "loads from YAML config file",
 			configFile: "config.yaml",
-			configContent: `api_endpoint: https://yaml.api.com
-api_token: yaml-token
+			configContent: `api_token: yaml-token
 log_level: warn
 confirm: true`,
 			expectedConfig: models.Config{
-				APIEndpoint: "https://yaml.api.com",
-				APIToken:    "yaml-token",
-				LogLevel:    "warn",
-				Confirm:     true,
+				APIToken: "yaml-token",
+				LogLevel: "warn",
+				Confirm:  true,
 			},
 		},
 		{
@@ -63,15 +58,13 @@ confirm: true`,
 				"REPLBAC_LOG_LEVEL": "debug",
 			},
 			configFile: "config.yaml",
-			configContent: `api_endpoint: https://yaml.api.com
-api_token: yaml-token
+			configContent: `api_token: yaml-token
 log_level: info
 confirm: true`,
 			expectedConfig: models.Config{
-				APIEndpoint: "https://yaml.api.com",
-				APIToken:    "env-token",
-				LogLevel:    "debug",
-				Confirm:     true,
+				APIToken: "env-token",
+				LogLevel: "debug",
+				Confirm:  true,
 			},
 		},
 		{
@@ -79,32 +72,28 @@ confirm: true`,
 			envVars: map[string]string{
 				"REPLICATED_API_TOKEN": "replicated-token",
 				"REPLBAC_API_TOKEN":    "replbac-token",
-				"REPLBAC_API_ENDPOINT": "https://test.api.com",
 			},
 			expectedConfig: models.Config{
-				APIEndpoint: "https://test.api.com",
-				APIToken:    "replicated-token",
-				LogLevel:    "info",
-				Confirm:     false,
+				APIToken: "replicated-token",
+				LogLevel: "info",
+				Confirm:  false,
 			},
 		},
 		{
 			name: "REPLBAC_API_TOKEN used when REPLICATED_API_TOKEN not set",
 			envVars: map[string]string{
-				"REPLBAC_API_TOKEN":    "replbac-token",
-				"REPLBAC_API_ENDPOINT": "https://test.api.com",
+				"REPLBAC_API_TOKEN": "replbac-token",
 			},
 			expectedConfig: models.Config{
-				APIEndpoint: "https://test.api.com",
-				APIToken:    "replbac-token",
-				LogLevel:    "info",
-				Confirm:     false,
+				APIToken: "replbac-token",
+				LogLevel: "info",
+				Confirm:  false,
 			},
 		},
 		{
 			name:       "invalid YAML returns error",
 			configFile: "config.yaml",
-			configContent: `api_endpoint: https://yaml.api.com
+			configContent: `api_token: yaml-token
   invalid: yaml: content`,
 			expectError: true,
 		},
@@ -112,7 +101,7 @@ confirm: true`,
 			name:       "unsupported file format returns error",
 			configFile: "config.json",
 			configContent: `{
-  "api_endpoint": "https://json.api.com"
+  "api_token": "yaml-token"
 }`,
 			expectError: true,
 		},
@@ -153,9 +142,6 @@ confirm: true`,
 				return
 			}
 
-			if config.APIEndpoint != tt.expectedConfig.APIEndpoint {
-				t.Errorf("APIEndpoint = %v, want %v", config.APIEndpoint, tt.expectedConfig.APIEndpoint)
-			}
 			if config.APIToken != tt.expectedConfig.APIToken {
 				t.Errorf("APIToken = %v, want %v", config.APIToken, tt.expectedConfig.APIToken)
 			}
@@ -179,16 +165,14 @@ func TestValidateConfig(t *testing.T) {
 		{
 			name: "valid config",
 			config: models.Config{
-				APIEndpoint: "https://api.replicated.com",
-				APIToken:    "valid-token",
-				LogLevel:    "info",
+				APIToken: "valid-token",
+				LogLevel: "info",
 			},
 		},
 		{
 			name: "missing API token",
 			config: models.Config{
-				APIEndpoint: "https://api.replicated.com",
-				LogLevel:    "info",
+				LogLevel: "info",
 			},
 			expectError: true,
 			errorMsg:    "API token is required",
@@ -196,22 +180,11 @@ func TestValidateConfig(t *testing.T) {
 		{
 			name: "invalid log level",
 			config: models.Config{
-				APIEndpoint: "https://api.replicated.com",
-				APIToken:    "valid-token",
-				LogLevel:    "invalid",
+				APIToken: "valid-token",
+				LogLevel: "invalid",
 			},
 			expectError: true,
 			errorMsg:    "invalid log level",
-		},
-		{
-			name: "invalid API endpoint",
-			config: models.Config{
-				APIEndpoint: "not-a-url",
-				APIToken:    "valid-token",
-				LogLevel:    "info",
-			},
-			expectError: true,
-			errorMsg:    "invalid API endpoint",
 		},
 	}
 
@@ -284,8 +257,7 @@ func TestLoadConfigWithDefaultPaths(t *testing.T) {
 	// Create a temporary config file in a known location
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "config.yaml")
-	configContent := `api_endpoint: https://test.api.com
-api_token: test-token
+	configContent := `api_token: test-token
 log_level: debug`
 	
 	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
@@ -299,9 +271,6 @@ log_level: debug`
 		return
 	}
 	
-	if config.APIEndpoint != "https://test.api.com" {
-		t.Errorf("APIEndpoint = %v, want %v", config.APIEndpoint, "https://test.api.com")
-	}
 	if config.APIToken != "test-token" {
 		t.Errorf("APIToken = %v, want %v", config.APIToken, "test-token")
 	}
@@ -318,8 +287,7 @@ func TestLoadConfigWithEnvironmentConfigPath(t *testing.T) {
 	// Create a temporary config file
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "custom-config.yaml")
-	configContent := `api_endpoint: https://custom.api.com
-api_token: custom-token
+	configContent := `api_token: custom-token
 log_level: warn`
 	
 	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
@@ -336,9 +304,6 @@ log_level: warn`
 		return
 	}
 	
-	if config.APIEndpoint != "https://custom.api.com" {
-		t.Errorf("APIEndpoint = %v, want %v", config.APIEndpoint, "https://custom.api.com")
-	}
 	if config.APIToken != "custom-token" {
 		t.Errorf("APIToken = %v, want %v", config.APIToken, "custom-token")
 	}
@@ -355,8 +320,7 @@ func TestLoadConfigEnvironmentOverridesConfigFile(t *testing.T) {
 	// Create a temporary config file
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "test-config.yaml")
-	configContent := `api_endpoint: https://file.api.com
-api_token: file-token
+	configContent := `api_token: file-token
 log_level: info`
 	
 	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
@@ -375,9 +339,6 @@ log_level: info`
 	}
 	
 	// Environment variables should override config file values
-	if config.APIEndpoint != "https://file.api.com" {
-		t.Errorf("APIEndpoint = %v, want %v", config.APIEndpoint, "https://file.api.com")
-	}
 	if config.APIToken != "env-token" {
 		t.Errorf("APIToken = %v, want %v (env should override)", config.APIToken, "env-token")
 	}
@@ -388,7 +349,6 @@ log_level: info`
 
 func cleanupEnv() {
 	envVars := []string{
-		"REPLBAC_API_ENDPOINT",
 		"REPLBAC_API_TOKEN",
 		"REPLICATED_API_TOKEN",
 		"REPLBAC_LOG_LEVEL",

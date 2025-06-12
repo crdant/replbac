@@ -12,12 +12,11 @@ import (
 )
 
 var (
-	cfgFile    string
-	cfg        models.Config
-	apiToken   string
-	apiEndpoint string
-	confirm    bool
-	logLevel   string
+	cfgFile  string
+	cfg      models.Config
+	apiToken string
+	confirm  bool
+	logLevel string
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -39,7 +38,6 @@ Environment Variables:
 
   REPLICATED_API_TOKEN    Replicated API token (for replicated CLI compatibility)
   REPLBAC_API_TOKEN       Replicated API token (alternative to REPLICATED_API_TOKEN)
-  REPLBAC_API_ENDPOINT    Replicated API endpoint URL  
   REPLBAC_CONFIG          Path to configuration file
   REPLBAC_CONFIRM         Automatically confirm operations (true/false)
   REPLBAC_LOG_LEVEL       Log level (debug, info, warn, error)
@@ -64,9 +62,6 @@ Environment Variables:
 		// Override config with command-line flags if provided
 		if apiToken != "" {
 			cfg.APIToken = apiToken
-		}
-		if apiEndpoint != "" {
-			cfg.APIEndpoint = apiEndpoint
 		}
 		if cmd.Flags().Changed("confirm") {
 			cfg.Confirm = confirm
@@ -106,7 +101,6 @@ func init() {
 	// Global flags
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file path (env: REPLBAC_CONFIG)")
 	rootCmd.PersistentFlags().StringVar(&apiToken, "api-token", "", "Replicated API token (env: REPLICATED_API_TOKEN, REPLBAC_API_TOKEN)")
-	rootCmd.PersistentFlags().StringVar(&apiEndpoint, "api-endpoint", "", "Replicated API endpoint URL (env: REPLBAC_API_ENDPOINT)")
 	rootCmd.PersistentFlags().BoolVar(&confirm, "confirm", false, "automatically confirm destructive operations (env: REPLBAC_CONFIRM)")
 	rootCmd.PersistentFlags().StringVar(&logLevel, "log-level", "", "log level: debug, info, warn, error (env: REPLBAC_LOG_LEVEL)")
 	

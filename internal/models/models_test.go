@@ -123,14 +123,10 @@ func TestAPIRole_ToRole(t *testing.T) {
 
 func TestConfig_DefaultValues(t *testing.T) {
 	config := Config{
-		APIEndpoint: "https://api.replicated.com",
-		Confirm:     true,
-		LogLevel:    "info",
+		Confirm:  true,
+		LogLevel: "info",
 	}
 
-	if config.APIEndpoint != "https://api.replicated.com" {
-		t.Errorf("Expected default API endpoint, got %s", config.APIEndpoint)
-	}
 	if !config.Confirm {
 		t.Error("Expected confirm to be true by default")
 	}
@@ -141,10 +137,9 @@ func TestConfig_DefaultValues(t *testing.T) {
 
 func TestConfig_YAMLMarshaling(t *testing.T) {
 	config := Config{
-		APIEndpoint: "https://api.replicated.com",
-		APIToken:    "test-token",
-		Confirm:     false,
-		LogLevel:    "debug",
+		APIToken: "test-token",
+		Confirm:  false,
+		LogLevel: "debug",
 	}
 
 	// Test marshaling to YAML
@@ -161,9 +156,6 @@ func TestConfig_YAMLMarshaling(t *testing.T) {
 	}
 
 	// Verify the data is preserved
-	if unmarshaledConfig.APIEndpoint != config.APIEndpoint {
-		t.Errorf("Expected API endpoint %s, got %s", config.APIEndpoint, unmarshaledConfig.APIEndpoint)
-	}
 	if unmarshaledConfig.APIToken != config.APIToken {
 		t.Errorf("Expected API token %s, got %s", config.APIToken, unmarshaledConfig.APIToken)
 	}

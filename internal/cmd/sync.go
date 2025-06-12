@@ -118,7 +118,7 @@ func RunSyncCommand(cmd *cobra.Command, args []string, config models.Config, dry
 
 	// Create API client
 	logger.Debug("creating API client")
-	client, err := api.NewClient(config.APIEndpoint, config.APIToken, logger)
+	client, err := api.NewClient(models.ReplicatedAPIEndpoint, config.APIToken, logger)
 	if err != nil {
 		logger.Error("failed to create API client: %v", err)
 		return HandleConfigurationError(cmd, fmt.Errorf("failed to create API client: %w", err))

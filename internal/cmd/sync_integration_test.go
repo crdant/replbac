@@ -401,8 +401,7 @@ func TestSyncCommandConfiguration(t *testing.T) {
 					Args:  cobra.MaximumNArgs(1),
 					RunE: func(cmd *cobra.Command, args []string) error {
 						config := models.Config{
-							APIEndpoint: "https://api.replicated.com",
-							APIToken:    "", // Empty token for this test
+							APIToken: "", // Empty token for this test
 						}
 						return RunSyncCommand(cmd, args, config, false, false, false, false)
 					},
