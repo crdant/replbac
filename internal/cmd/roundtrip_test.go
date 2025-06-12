@@ -461,7 +461,7 @@ func NewRoundTripSyncCommand(mockClient *MockClient) *cobra.Command {
 			
 			// Use the logging version which supports confirmation
 			logger := logging.NewLogger(cmd.OutOrStdout(), false)
-			return RunSyncCommandWithLogging(cmd, args, mockClient, dryRun, false, logger, config)
+			return RunSyncCommandWithLogging(cmd, args, mockClient, dryRun, false, true, logger, config)
 		},
 	}
 	

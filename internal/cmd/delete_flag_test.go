@@ -282,21 +282,6 @@ Use --dry-run to preview changes without applying them.`,
 
 // RunSyncCommandWithDeleteControl implements sync with delete flag control for testing
 func RunSyncCommandWithDeleteControl(cmd *cobra.Command, args []string, client *MockClient, dryRun, delete bool) error {
-	// This is a simplified version for testing the delete flag behavior
-	// The real implementation will be in the actual sync command
-	
-	targetDir := "."
-	if len(args) > 0 {
-		targetDir = args[0]
-	}
-	
-	cmd.Printf("Synchronizing roles from directory: %s\n", targetDir)
-	
-	if dryRun {
-		cmd.Println("DRY RUN: No changes will be applied")
-	}
-	
-	// For testing purposes, we'll implement a simplified version
-	// that demonstrates the delete flag behavior
-	return nil
+	// Use the actual sync command implementation
+	return RunSyncCommandWithClient(cmd, args, client, dryRun, delete)
 }
