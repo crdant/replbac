@@ -106,7 +106,7 @@ resources:
 				},
 			},
 			args:        []string{},
-			flags:       map[string]string{},
+			flags:       map[string]string{"delete": "true"},
 			expectError: false,
 			expectOutput: []string{
 				"create 1 role(s), update 1 role(s), and delete 1 role(s)",
@@ -315,6 +315,7 @@ resources:
 	}
 }
 
+
 // TestSyncCommandConfiguration tests configuration handling
 func TestSyncCommandConfiguration(t *testing.T) {
 	tests := []struct {
@@ -403,7 +404,7 @@ func TestSyncCommandConfiguration(t *testing.T) {
 							APIEndpoint: "https://api.replicated.com",
 							APIToken:    "", // Empty token for this test
 						}
-						return RunSyncCommand(cmd, args, config, false, false)
+						return RunSyncCommand(cmd, args, config, false, false, false, false)
 					},
 				}
 			} else {
@@ -595,14 +596,15 @@ func NewSyncCommand(mockClient *MockClient) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Get flag values
 			dryRun, _ := cmd.Flags().GetBool("dry-run")
-			
-			return RunSyncCommandWithClient(cmd, args, mockClient, dryRun)
+			delete, _ := cmd.Flags().GetBool("delete")
+			return RunSyncCommandWithClient(cmd, args, mockClient, dryRun, delete, false)
 		},
 	}
 	
 	// Add flags
 	cmd.Flags().Bool("dry-run", false, "preview changes without applying them")
 	cmd.Flags().String("roles-dir", "", "directory containing role YAML files")
+	cmd.Flags().Bool("delete", false, "delete remote roles not present in local files")
 	
 	return cmd
 }

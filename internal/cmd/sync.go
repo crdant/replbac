@@ -18,6 +18,8 @@ import (
 var (
 	syncDryRun   bool
 	syncDiff     bool
+	syncDelete   bool
+	syncForce    bool
 	verbose      bool
 	debug        bool
 )
@@ -47,7 +49,7 @@ for enhanced reporting with detailed diffs showing exactly what will change.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// If diff is enabled, enable dry-run too
 		effectiveDryRun := syncDryRun || syncDiff
-		return RunSyncCommand(cmd, args, cfg, effectiveDryRun, syncDiff)
+		return RunSyncCommand(cmd, args, cfg, effectiveDryRun, syncDiff, syncDelete, syncForce)
 	},
 }
 
@@ -57,12 +59,14 @@ func init() {
 	// Sync-specific flags
 	syncCmd.Flags().BoolVar(&syncDryRun, "dry-run", false, "preview changes without applying them")
 	syncCmd.Flags().BoolVar(&syncDiff, "diff", false, "preview changes with detailed diffs (implies --dry-run)")
+	syncCmd.Flags().BoolVar(&syncDelete, "delete", false, "delete remote roles not present in local files (default: false)")
+	syncCmd.Flags().BoolVar(&syncForce, "force", false, "skip confirmation prompts (requires --delete)")
 	syncCmd.Flags().BoolVar(&verbose, "verbose", false, "enable info-level logging to stderr (progress and results)")
 	syncCmd.Flags().BoolVar(&debug, "debug", false, "enable debug-level logging to stderr (detailed operation info)")
 }
 
 // RunSyncCommand implements the main sync logic with comprehensive error handling
-func RunSyncCommand(cmd *cobra.Command, args []string, config models.Config, dryRun bool, diff bool) error {
+func RunSyncCommand(cmd *cobra.Command, args []string, config models.Config, dryRun bool, diff bool, delete bool, force bool) error {
 	// Ensure command output goes to stdout and logs go to stderr (unless already set for testing)
 	if cmd.OutOrStdout() == os.Stderr {
 		cmd.SetOut(os.Stdout)
@@ -117,11 +121,11 @@ func RunSyncCommand(cmd *cobra.Command, args []string, config models.Config, dry
 	}
 	
 	// Use the enhanced logging version
-	return RunSyncCommandWithLogging(cmd, args, client, dryRun, diff, logger, config)
+	return RunSyncCommandWithLogging(cmd, args, client, dryRun, diff, delete, force, logger, config)
 }
 
 // RunSyncCommandWithLogging implements sync with enhanced logging and user feedback
-func RunSyncCommandWithLogging(cmd *cobra.Command, args []string, client api.ClientInterface, dryRun bool, diff bool, logger *logging.Logger, config models.Config) error {
+func RunSyncCommandWithLogging(cmd *cobra.Command, args []string, client api.ClientInterface, dryRun bool, diff bool, delete bool, force bool, logger *logging.Logger, config models.Config) error {
 	// Determine roles directory
 	targetDir := "."
 	if len(args) > 0 {
@@ -192,6 +196,12 @@ func RunSyncCommandWithLogging(cmd *cobra.Command, args []string, client api.Cli
 		return fmt.Errorf("failed to compare roles: %w", err)
 	}
 
+	// Remove deletions from plan if delete flag is not set
+	if !delete && len(plan.Deletes) > 0 {
+		logger.Debug("removing %d deletions from plan because --delete flag not set", len(plan.Deletes))
+		plan.Deletes = []string{} // Clear deletions
+	}
+
 	logger.Debug("plan generated: %d creates, %d updates, %d deletes", len(plan.Creates), len(plan.Updates), len(plan.Deletes))
 
 	// Display plan summary
@@ -229,8 +239,8 @@ func RunSyncCommandWithLogging(cmd *cobra.Command, args []string, client api.Cli
 		}
 	}
 
-	// Ask for confirmation if deletions are planned and not in dry-run mode
-	if len(plan.Deletes) > 0 && !dryRun && !config.Confirm {
+	// Ask for confirmation if deletions are planned and not in dry-run mode and not forced
+	if len(plan.Deletes) > 0 && !dryRun && !config.Confirm && !force {
 		cmd.Printf("\nThis operation will permanently delete %d role(s) from the API.\n", len(plan.Deletes))
 		cmd.Print("Do you want to continue? (y/N): ")
 		
@@ -288,7 +298,7 @@ func RunSyncCommandWithLogging(cmd *cobra.Command, args []string, client api.Cli
 }
 
 // RunSyncCommandWithClient implements the main sync logic with dependency injection
-func RunSyncCommandWithClient(cmd *cobra.Command, args []string, client api.ClientInterface, dryRun bool) error {
+func RunSyncCommandWithClient(cmd *cobra.Command, args []string, client api.ClientInterface, dryRun bool, delete bool, force bool) error {
 	// Ensure command output goes to stdout and logs go to stderr (unless already set for testing)
 	if cmd.OutOrStdout() == os.Stderr {
 		cmd.SetOut(os.Stdout)
@@ -362,6 +372,11 @@ func RunSyncCommandWithClient(cmd *cobra.Command, args []string, client api.Clie
 	plan, err := sync.CompareRoles(localRoles, remoteRoles)
 	if err != nil {
 		return fmt.Errorf("failed to compare roles: %w", err)
+	}
+	
+	// Remove deletions from plan if delete flag is not set
+	if !delete && len(plan.Deletes) > 0 {
+		plan.Deletes = []string{} // Clear deletions
 	}
 	
 	// Display plan summary

@@ -120,7 +120,7 @@ resources:
 					description: "user runs verbose sync to understand changes",
 					command:     "sync",
 					args:        []string{},
-					flags:       map[string]string{"verbose": "true"},
+					flags:       map[string]string{"verbose": "true", "delete": "true"},
 					expectOutput: []string{
 						"Synchronizing roles from directory: .",
 						"Sync plan:",
@@ -225,6 +225,7 @@ resources:
 					description: "user syncs staging roles using positional argument",
 					command:     "sync",
 					args:        []string{"staging"},
+					flags:       map[string]string{"delete": "true"},
 					expectOutput: []string{
 						"Synchronizing roles from directory: staging",
 						"Sync plan: 1 to create, 2 to delete",
@@ -601,13 +602,14 @@ func NewWorkflowSyncCommand(mockClient *WorkflowMockClient) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			dryRun, _ := cmd.Flags().GetBool("dry-run")
-			
-			return RunSyncCommandWithClient(cmd, args, mockClient, dryRun)
+			delete, _ := cmd.Flags().GetBool("delete")
+			return RunSyncCommandWithClient(cmd, args, mockClient, dryRun, delete, false)
 		},
 	}
 	
 	cmd.Flags().Bool("dry-run", false, "preview changes without applying them")
 	cmd.Flags().String("roles-dir", "", "directory containing role YAML files")
+	cmd.Flags().Bool("delete", false, "delete remote roles not present in local files")
 	cmd.Flags().Bool("verbose", false, "enable verbose logging")
 	
 	return cmd
