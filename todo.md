@@ -68,17 +68,31 @@
 - [x] Remove `--output-dir` flag and `--roles-dir` flags since we have a positional argument
 - [x] Use a flag to for whether to delete roles not in local YAML files (default to false)
 - [x] Document environment variables in help alongside the equivalent CLI flags
-- [ ] Let's get rid of the configuration for the API endpoint since there's only one
-- [ ] Determine if we should make any of our package public and add to do items in a new step to make the packages public
+- [x] Let's get rid of the configuration for the API endpoint since there's only one
+- [x] Determine if we should make any of our package public and add to do items to this document for each one under Step 12
 - [ ] Add man page
 
-#### Step 11: Build System and Integration
+#### Step 11: Expose Public API
+- [ ] Move `internal/models` to `pkg/models` - Core data structures for roles and API communication
+- [ ] Move `internal/api` to `pkg/api` with logger interface - HTTP client for Replicated API operations
+- [ ] Move `internal/roles` to `pkg/roles` with optional logger interface - YAML file operations for role management
+- [ ] Move `internal/sync` to `pkg/sync` with logger interface - Role comparison and sync planning algorithms
+- [ ] Keep `internal/config` internal - CLI-specific configuration loading
+- [ ] Keep `internal/logging` internal - Use interfaces in public packages instead
+- [ ] Define Logger interfaces in public packages that need logging
+- [ ] Update all import paths across the codebase to use new package locations
+- [ ] Add comprehensive package documentation (godoc) for all public packages
+- [ ] Add usage examples in package documentation
+- [ ] Ensure all public APIs have comprehensive unit test coverage
+- [ ] Review public API surface for consistency and Go best practices
+
+#### Step 12: Build System and Integration
 - [ ] Complete Makefile with all targets
 - [ ] Add comprehensive integration tests
 - [ ] Cross-platform build support
 - [ ] Final documentation and security review
 
-#### Step 12: CI/CD Implementation
+#### Step 13: CI/CD Implementation
 - [ ] Implement format, lint, test, and build pipeline for all commits
 - [ ] Add pull request checks and status badges
 - [ ] Implement SLSA compliant release pipeline
