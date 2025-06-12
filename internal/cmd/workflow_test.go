@@ -603,7 +603,7 @@ func NewWorkflowSyncCommand(mockClient *WorkflowMockClient) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			dryRun, _ := cmd.Flags().GetBool("dry-run")
 			delete, _ := cmd.Flags().GetBool("delete")
-			return RunSyncCommandWithClient(cmd, args, mockClient, dryRun, delete)
+			return RunSyncCommandWithClient(cmd, args, mockClient, dryRun, delete, false)
 		},
 	}
 	

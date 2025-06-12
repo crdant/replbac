@@ -404,7 +404,7 @@ func TestSyncCommandConfiguration(t *testing.T) {
 							APIEndpoint: "https://api.replicated.com",
 							APIToken:    "", // Empty token for this test
 						}
-						return RunSyncCommand(cmd, args, config, false, false, false)
+						return RunSyncCommand(cmd, args, config, false, false, false, false)
 					},
 				}
 			} else {
@@ -597,7 +597,7 @@ func NewSyncCommand(mockClient *MockClient) *cobra.Command {
 			// Get flag values
 			dryRun, _ := cmd.Flags().GetBool("dry-run")
 			delete, _ := cmd.Flags().GetBool("delete")
-			return RunSyncCommandWithClient(cmd, args, mockClient, dryRun, delete)
+			return RunSyncCommandWithClient(cmd, args, mockClient, dryRun, delete, false)
 		},
 	}
 	
