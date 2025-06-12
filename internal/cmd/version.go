@@ -15,7 +15,10 @@ var (
 var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print version information",
-	Long:  `Print detailed version information including build details.`,
+	Long: `Print detailed version information including build details.
+
+Environment Variables:
+  See 'replbac --help' for full environment variable documentation.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		cmd.Printf("replbac version %s\n", Version)
 		cmd.Printf("Git commit: %s\n", GitCommit)

@@ -44,7 +44,11 @@ Logging levels (to stderr):
 • --debug: DEBUG level (detailed operation info)
 
 Use --dry-run to preview changes without applying them, or --diff 
-for enhanced reporting with detailed diffs showing exactly what will change.`,
+for enhanced reporting with detailed diffs showing exactly what will change.
+
+Environment Variables:
+  This command supports all global environment variables. 
+  See 'replbac --help' for full environment variable documentation.`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// If diff is enabled, enable dry-run too

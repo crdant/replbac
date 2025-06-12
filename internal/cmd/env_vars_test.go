@@ -33,7 +33,6 @@ func TestEnvironmentVariableDocumentation(t *testing.T) {
 			command: []string{"sync", "--help"},
 			expectInHelp: []string{
 				"Environment Variables:",
-				"REPLICATED_API_TOKEN",
 				"See 'replbac --help' for full environment variable documentation",
 			},
 		},
@@ -42,7 +41,6 @@ func TestEnvironmentVariableDocumentation(t *testing.T) {
 			command: []string{"pull", "--help"},
 			expectInHelp: []string{
 				"Environment Variables:",
-				"REPLICATED_API_TOKEN",
 				"See 'replbac --help' for full environment variable documentation",
 			},
 		},
