@@ -92,13 +92,7 @@ func ValidateConfiguration(config models.Config) error {
 		}
 	}
 
-	if strings.TrimSpace(config.APIEndpoint) == "" {
-		return &ConfigurationError{
-			Field:    "APIEndpoint",
-			Message:  "API endpoint is required",
-			Guidance: "Set the REPLBAC_API_ENDPOINT environment variable or use --api-endpoint flag",
-		}
-	}
+	// API endpoint is now hardcoded, no validation needed
 
 	return nil
 }

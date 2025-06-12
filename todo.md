@@ -68,8 +68,8 @@
 - [x] Remove `--output-dir` flag and `--roles-dir` flags since we have a positional argument
 - [x] Use a flag to for whether to delete roles not in local YAML files (default to false)
 - [x] Document environment variables in help alongside the equivalent CLI flags
-- [ ] Determine if we should make any of our package public
 - [ ] Let's get rid of the configuration for the API endpoint since there's only one
+- [ ] Determine if we should make any of our package public and add to do items in a new step to make the packages public
 - [ ] Add man page
 
 #### Step 11: Build System and Integration

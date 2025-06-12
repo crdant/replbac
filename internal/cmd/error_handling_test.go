@@ -33,8 +33,7 @@ func TestEnhancedErrorHandling(t *testing.T) {
 				return "", func() {}
 			},
 			config: models.Config{
-				APIEndpoint: "https://api.replicated.com",
-				APIToken:    "test-token",
+				APIToken: "test-token",
 			},
 			args:               []string{"/nonexistent/path"},
 			expectError:        true,
@@ -64,8 +63,7 @@ resources:
 				return tempDir, func() { os.RemoveAll(tempDir) }
 			},
 			config: models.Config{
-				APIEndpoint: "https://api.replicated.com",
-				APIToken:    "test-token",
+				APIToken: "test-token",
 			},
 			expectError:        false, // Should continue with valid files
 			expectOutput:       []string{"Warning:", "Skipped", "invalid.yaml"},
@@ -92,13 +90,12 @@ resources:
 				return tempDir, func() { os.RemoveAll(tempDir) }
 			},
 			config: models.Config{
-				APIEndpoint: "https://invalid-endpoint.example.com",
-				APIToken:    "test-token",
+				APIToken: "test-token",
 			},
 			expectError:        true,
 			expectExitCode:     1,
-			expectOutput:       []string{"Error:", "failed to get remote roles", "Connection failed"},
-			expectErrorMessage: "API connection",
+			expectOutput:       []string{"Error:", "failed to get remote roles"},
+			expectErrorMessage: "failed to get remote roles",
 			expectUserGuidance: true,
 		},
 		{
@@ -107,8 +104,7 @@ resources:
 				return "", func() {}
 			},
 			config: models.Config{
-				APIEndpoint: "https://api.replicated.com",
-				APIToken:    "", // Missing token
+				APIToken: "", // Missing token
 			},
 			expectError:        true,
 			expectExitCode:     1,
@@ -137,8 +133,7 @@ resources:
 				return tempDir, func() { os.RemoveAll(tempDir) }
 			},
 			config: models.Config{
-				APIEndpoint: "https://api.replicated.com",
-				APIToken:    "test-token",
+				APIToken: "test-token",
 			},
 			expectError:        true,
 			expectExitCode:     1,
@@ -167,8 +162,7 @@ resources:
 				}
 			},
 			config: models.Config{
-				APIEndpoint: "https://api.replicated.com",
-				APIToken:    "test-token",
+				APIToken: "test-token",
 			},
 			expectError:        true,
 			expectExitCode:     1,

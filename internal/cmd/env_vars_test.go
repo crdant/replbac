@@ -20,8 +20,7 @@ func TestEnvironmentVariableDocumentation(t *testing.T) {
 			expectInHelp: []string{
 				"Environment Variables:",
 				"REPLICATED_API_TOKEN",
-				"REPLBAC_API_TOKEN", 
-				"REPLBAC_API_ENDPOINT",
+				"REPLBAC_API_TOKEN",
 				"REPLBAC_CONFIG",
 				"REPLBAC_CONFIRM",
 				"REPLBAC_LOG_LEVEL",
@@ -94,13 +93,6 @@ func TestEnvironmentVariableReference(t *testing.T) {
 			},
 		},
 		{
-			name:     "api-endpoint flag mentions environment variable",
-			flagName: "api-endpoint", 
-			expectInDescription: []string{
-				"REPLBAC_API_ENDPOINT",
-			},
-		},
-		{
 			name:     "config flag mentions environment variable",
 			flagName: "config",
 			expectInDescription: []string{
@@ -168,7 +160,6 @@ Environment Variables:
 
   REPLICATED_API_TOKEN    Replicated API token (for replicated CLI compatibility)
   REPLBAC_API_TOKEN       Replicated API token (alternative to REPLICATED_API_TOKEN)
-  REPLBAC_API_ENDPOINT    Replicated API endpoint URL  
   REPLBAC_CONFIG          Path to configuration file
   REPLBAC_CONFIRM         Automatically confirm operations (true/false)
   REPLBAC_LOG_LEVEL       Log level (debug, info, warn, error)
@@ -180,7 +171,6 @@ Environment Variables:
 	// Add flags with environment variable documentation
 	cmd.PersistentFlags().String("config", "", "config file path (env: REPLBAC_CONFIG)")
 	cmd.PersistentFlags().String("api-token", "", "Replicated API token (env: REPLICATED_API_TOKEN, REPLBAC_API_TOKEN)")
-	cmd.PersistentFlags().String("api-endpoint", "", "Replicated API endpoint URL (env: REPLBAC_API_ENDPOINT)")
 	cmd.PersistentFlags().Bool("confirm", false, "automatically confirm destructive operations (env: REPLBAC_CONFIRM)")
 	cmd.PersistentFlags().String("log-level", "", "log level: debug, info, warn, error (env: REPLBAC_LOG_LEVEL)")
 	

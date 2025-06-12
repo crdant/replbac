@@ -3,7 +3,6 @@ package config
 import (
 	"errors"
 	"fmt"
-	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -29,9 +28,8 @@ var validLogLevels = map[string]bool{
 func LoadConfig(configPath string) (models.Config, error) {
 	// Start with default configuration
 	config := models.Config{
-		APIEndpoint: "https://api.replicated.com",
-		LogLevel:    "info",
-		Confirm:     false,
+		LogLevel: "info",
+		Confirm:  false,
 	}
 
 	// Load from config file if provided
@@ -91,9 +89,8 @@ func GetDefaultConfigPaths() []string {
 func LoadConfigWithDefaults(defaultPaths []string) (models.Config, error) {
 	// Start with default configuration
 	config := models.Config{
-		APIEndpoint: "https://api.replicated.com",
-		LogLevel:    "info",
-		Confirm:     false,
+		LogLevel: "info",
+		Confirm:  false,
 	}
 
 	// Check if config path is specified via environment variable
@@ -156,9 +153,6 @@ func loadFromFile(configPath string) (models.Config, error) {
 func loadFromEnv() models.Config {
 	var config models.Config
 
-	if val := os.Getenv("REPLBAC_API_ENDPOINT"); val != "" {
-		config.APIEndpoint = val
-	}
 	// Check REPLICATED_API_TOKEN first (for compatibility with replicated CLI)
 	if val := os.Getenv("REPLICATED_API_TOKEN"); val != "" {
 		config.APIToken = val
@@ -179,9 +173,6 @@ func loadFromEnv() models.Config {
 
 // mergeConfigs merges source config into target, only overriding non-zero values
 func mergeConfigs(target, source *models.Config) {
-	if source.APIEndpoint != "" {
-		target.APIEndpoint = source.APIEndpoint
-	}
 	if source.APIToken != "" {
 		target.APIToken = source.APIToken
 	}
@@ -207,11 +198,7 @@ func ValidateConfig(config models.Config) error {
 		return errors.New("invalid log level")
 	}
 
-	// Validate API endpoint is a valid URL
-	u, err := url.Parse(config.APIEndpoint)
-	if err != nil || u.Scheme == "" || (u.Scheme != "http" && u.Scheme != "https") {
-		return errors.New("invalid API endpoint")
-	}
+	// Note: API endpoint is now hardcoded to models.ReplicatedAPIEndpoint
 
 	return nil
 }

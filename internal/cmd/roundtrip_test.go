@@ -453,10 +453,9 @@ func NewRoundTripSyncCommand(mockClient *MockClient) *cobra.Command {
 			
 			// For round-trip tests, automatically confirm destructive operations
 			config := models.Config{
-				APIEndpoint: "https://api.test.com",
-				APIToken:    "test-token",
-				Confirm:     confirm || true, // Always confirm in tests
-				LogLevel:    "info",
+				APIToken: "test-token",
+				Confirm:  confirm || true, // Always confirm in tests
+				LogLevel: "info",
 			}
 			
 			// Use the logging version which supports confirmation

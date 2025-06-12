@@ -75,8 +75,7 @@ func TestConfigurationLoading(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := tmpDir + "/config.yaml"
 	
-	configContent := `api_endpoint: https://test.api.com
-api_token: test-token
+	configContent := `api_token: test-token
 log_level: debug
 confirm: true`
 	
@@ -151,7 +150,6 @@ func TestFlagParsing(t *testing.T) {
 			name: "all flags parse correctly",
 			args: []string{
 				"--api-token", "test-token",
-				"--api-endpoint", "https://api.test.com",
 				"--log-level", "debug",
 				"--confirm",
 				"version",
@@ -192,7 +190,6 @@ func createTestRootCmd() *cobra.Command {
 	// Reset global variables
 	cfgFile = ""
 	apiToken = ""
-	apiEndpoint = ""
 	confirm = false
 	logLevel = ""
 	syncDryRun = false
@@ -211,7 +208,6 @@ and the Replicated platform.`,
 	// Add flags
 	cmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file path")
 	cmd.PersistentFlags().StringVar(&apiToken, "api-token", "", "Replicated API token")
-	cmd.PersistentFlags().StringVar(&apiEndpoint, "api-endpoint", "", "Replicated API endpoint URL")
 	cmd.PersistentFlags().BoolVar(&confirm, "confirm", false, "automatically confirm operations")
 	cmd.PersistentFlags().StringVar(&logLevel, "log-level", "", "log level")
 

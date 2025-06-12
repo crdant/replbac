@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -12,12 +13,11 @@ import (
 )
 
 var (
-	cfgFile    string
-	cfg        models.Config
-	apiToken   string
-	apiEndpoint string
-	confirm    bool
-	logLevel   string
+	cfgFile  string
+	cfg      models.Config
+	apiToken string
+	confirm  bool
+	logLevel string
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -32,20 +32,7 @@ Key features:
 • Sync local YAML role files to Replicated API
 • Initialize local files from existing API roles  
 • Dry-run mode to preview changes before applying
-• Support for multiple configuration sources
-
-Environment Variables:
-  Configuration can be provided via environment variables as an alternative to CLI flags:
-
-  REPLICATED_API_TOKEN    Replicated API token (for replicated CLI compatibility)
-  REPLBAC_API_TOKEN       Replicated API token (alternative to REPLICATED_API_TOKEN)
-  REPLBAC_API_ENDPOINT    Replicated API endpoint URL  
-  REPLBAC_CONFIG          Path to configuration file
-  REPLBAC_CONFIRM         Automatically confirm operations (true/false)
-  REPLBAC_LOG_LEVEL       Log level (debug, info, warn, error)
-
-  Environment variables have lower precedence than CLI flags but higher than config files.
-  REPLICATED_API_TOKEN is checked first for compatibility with the replicated CLI.`,
+• Support for multiple configuration sources`,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		// Load configuration
 		var err error
@@ -64,9 +51,6 @@ Environment Variables:
 		// Override config with command-line flags if provided
 		if apiToken != "" {
 			cfg.APIToken = apiToken
-		}
-		if apiEndpoint != "" {
-			cfg.APIEndpoint = apiEndpoint
 		}
 		if cmd.Flags().Changed("confirm") {
 			cfg.Confirm = confirm
@@ -106,10 +90,39 @@ func init() {
 	// Global flags
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file path (env: REPLBAC_CONFIG)")
 	rootCmd.PersistentFlags().StringVar(&apiToken, "api-token", "", "Replicated API token (env: REPLICATED_API_TOKEN, REPLBAC_API_TOKEN)")
-	rootCmd.PersistentFlags().StringVar(&apiEndpoint, "api-endpoint", "", "Replicated API endpoint URL (env: REPLBAC_API_ENDPOINT)")
 	rootCmd.PersistentFlags().BoolVar(&confirm, "confirm", false, "automatically confirm destructive operations (env: REPLBAC_CONFIRM)")
 	rootCmd.PersistentFlags().StringVar(&logLevel, "log-level", "", "log level: debug, info, warn, error (env: REPLBAC_LOG_LEVEL)")
 	
 	// Mark sensitive flags
 	rootCmd.PersistentFlags().MarkHidden("api-token")
+	
+	// Override help function to position environment variables before final Use message
+	originalHelpFunc := rootCmd.HelpFunc()
+	rootCmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
+		if cmd.Name() == "replbac" {
+			// Capture and modify help output to insert environment variables
+			var buf strings.Builder
+			originalOut := cmd.OutOrStdout()
+			cmd.SetOut(&buf)
+			originalHelpFunc(cmd, args)
+			cmd.SetOut(originalOut)
+			helpText := buf.String()
+			useMessage := `Use "replbac [command] --help" for more information about a command.`
+			if strings.Contains(helpText, useMessage) {
+				envVars := "\nEnvironment Variables:\n" + 
+					"  Configuration can be provided via environment variables as an alternative to CLI flags:\n\n" +
+					"  REPLICATED_API_TOKEN    Replicated API token (for replicated CLI compatibility)\n" +
+					"  REPLBAC_API_TOKEN       Replicated API token (alternative to REPLICATED_API_TOKEN)\n" +
+					"  REPLBAC_CONFIG          Path to configuration file\n" +
+					"  REPLBAC_CONFIRM         Automatically confirm operations (true/false)\n" +
+					"  REPLBAC_LOG_LEVEL       Log level (debug, info, warn, error)\n\n" +
+					"  Environment variables have lower precedence than CLI flags but higher than config files.\n" +
+					"  REPLICATED_API_TOKEN is checked first for compatibility with the replicated CLI.\n\n"
+				helpText = strings.Replace(helpText, useMessage, envVars + useMessage, 1)
+			}
+			cmd.Print(helpText)
+		} else {
+			originalHelpFunc(cmd, args)
+		}
+	})
 }
