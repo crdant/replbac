@@ -38,7 +38,11 @@ The pull operation will:
 
 Use --dry-run to preview what files would be created or updated.
 Use --diff to see detailed differences when files would be changed.
-Use --force to overwrite existing files.`,
+Use --force to overwrite existing files.
+
+Environment Variables:
+  This command supports all global environment variables.
+  See 'replbac --help' for full environment variable documentation.`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// If diff is enabled, enable dry-run too
