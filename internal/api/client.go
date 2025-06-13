@@ -28,6 +28,10 @@ type ClientInterface interface {
 	UpdateRoleWithContext(ctx context.Context, role models.Role) error
 	DeleteRole(roleName string) error
 	DeleteRoleWithContext(ctx context.Context, roleName string) error
+	GetTeamMembers() ([]models.TeamMember, error)
+	GetTeamMembersWithContext(ctx context.Context) ([]models.TeamMember, error)
+	AssignMemberRole(memberEmail, roleID string) error
+	AssignMemberRoleWithContext(ctx context.Context, memberEmail, roleID string) error
 }
 
 // Client represents an HTTP client for the Replicated API
@@ -606,5 +610,115 @@ func (c *Client) DeleteRoleWithContext(ctx context.Context, roleName string) err
 	}
 
 	c.logger.Info("successfully deleted role '%s'", roleName)
+	return nil
+}
+
+// GetTeamMembers retrieves all team members from the API
+func (c *Client) GetTeamMembers() ([]models.TeamMember, error) {
+	return c.GetTeamMembersWithContext(context.Background())
+}
+
+// GetTeamMembersWithContext retrieves all team members from the API with context support
+func (c *Client) GetTeamMembersWithContext(ctx context.Context) ([]models.TeamMember, error) {
+	c.logger.Info("fetching team members from API")
+	start := time.Now()
+	defer func() {
+		c.logger.Debug("GetTeamMembers completed in %v", time.Since(start))
+	}()
+
+	url := c.baseURL + "/vendor/v3/team/members"
+	c.logger.Debug("fetching team members from endpoint: %s", url)
+
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		c.logger.Error("failed to create HTTP request for %s: %v", url, err)
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Authorization", c.apiToken)
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := c.executeWithRetry(ctx, req)
+	if err != nil {
+		c.logger.Error("HTTP request failed for %s: %v", url, err)
+		return nil, fmt.Errorf("failed to execute request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	c.logger.Debug("received HTTP response: status=%d", resp.StatusCode)
+	if resp.StatusCode != http.StatusOK {
+		c.logger.Error("API request failed: GET %s returned status %d", url, resp.StatusCode)
+		return nil, c.handleErrorResponse(resp)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		c.logger.Error("failed to read response body from %s: %v", url, err)
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	c.logger.Debug("received response body of %d bytes", len(body))
+	
+	// Parse the response which has a "members" wrapper
+	var response struct {
+		Members []models.TeamMember `json:"members"`
+	}
+	if err := json.Unmarshal(body, &response); err != nil {
+		c.logger.Error("failed to parse JSON response from %s: %v", url, err)
+		return nil, fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	c.logger.Info("successfully fetched %d team members from API", len(response.Members))
+	return response.Members, nil
+}
+
+// AssignMemberRole assigns a role to a team member via the API
+func (c *Client) AssignMemberRole(memberEmail, roleID string) error {
+	return c.AssignMemberRoleWithContext(context.Background(), memberEmail, roleID)
+}
+
+// AssignMemberRoleWithContext assigns a role to a team member via the API with context support
+func (c *Client) AssignMemberRoleWithContext(ctx context.Context, memberEmail, roleID string) error {
+	c.logger.Info("assigning role '%s' to member '%s' via API", roleID, memberEmail)
+	start := time.Now()
+	defer func() {
+		c.logger.Debug("AssignMemberRole for '%s' completed in %v", memberEmail, time.Since(start))
+	}()
+
+	if strings.TrimSpace(memberEmail) == "" {
+		c.logger.Error("member email is required for role assignment")
+		return fmt.Errorf("member email is required")
+	}
+	if strings.TrimSpace(roleID) == "" {
+		c.logger.Error("role ID is required for role assignment")
+		return fmt.Errorf("role ID is required")
+	}
+
+	url := c.baseURL + "/vendor/v3/team/member/" + memberEmail + "/role/" + roleID
+	c.logger.Debug("assigning role at endpoint: %s", url)
+
+	req, err := http.NewRequest(http.MethodPut, url, nil)
+	if err != nil {
+		c.logger.Error("failed to create HTTP request for %s: %v", url, err)
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Authorization", c.apiToken)
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := c.executeWithRetry(ctx, req)
+	if err != nil {
+		c.logger.Error("HTTP request failed for %s: %v", url, err)
+		return fmt.Errorf("failed to execute request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	c.logger.Debug("received HTTP response for role assignment: status=%d", resp.StatusCode)
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
+		c.logger.Error("failed to assign role '%s' to member '%s': API returned status %d", roleID, memberEmail, resp.StatusCode)
+		return c.handleErrorResponse(resp)
+	}
+
+	c.logger.Info("successfully assigned role '%s' to member '%s'", roleID, memberEmail)
 	return nil
 }
