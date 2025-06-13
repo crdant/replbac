@@ -74,7 +74,7 @@
 
 #### Step 11: Add membership
 - [x] Add `members` field to Role model in `internal/models/models.go`
-- [ ] Update YAML parsing and validation in `internal/roles/files.go` to handle members field
+- [x] Update YAML parsing and validation in `internal/roles/files.go` to handle members field
 - [ ] Add team member data structures (Member, TeamMember) to models
 - [ ] Implement GET team members API call in `internal/api/client.go`
 - [ ] Implement PUT team member role assignment API call in `internal/api/client.go`
