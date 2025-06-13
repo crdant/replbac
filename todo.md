@@ -72,7 +72,20 @@
 - [x] Determine if we should make any of our package public and add to do items to this document for each one under Step 12
 - [ ] Add man page
 
-#### Step 11: Expose Public API
+#### Step 11: Add membership
+- [ ] Add `members` field to Role model in `internal/models/models.go`
+- [ ] Update YAML parsing and validation in `internal/roles/files.go` to handle members field
+- [ ] Add team member data structures (Member, TeamMember) to models
+- [ ] Implement GET team members API call in `internal/api/client.go`
+- [ ] Implement PUT team member role assignment API call in `internal/api/client.go`
+- [ ] Add member validation logic to ensure users only appear in one role at a time
+- [ ] Update sync comparison logic in `internal/sync/compare.go` to handle member assignments
+- [ ] Add member assignment execution to `internal/sync/executor.go`
+- [ ] Update CLI commands to support member sync operations
+- [ ] Add comprehensive tests for member management functionality
+- [ ] Update documentation and examples to show members field usage
+
+#### Step 12: Expose Public API
 - [ ] Move `internal/models` to `pkg/models` - Core data structures for roles and API communication
 - [ ] Move `internal/api` to `pkg/api` with logger interface - HTTP client for Replicated API operations
 - [ ] Move `internal/roles` to `pkg/roles` with optional logger interface - YAML file operations for role management
@@ -86,13 +99,13 @@
 - [ ] Ensure all public APIs have comprehensive unit test coverage
 - [ ] Review public API surface for consistency and Go best practices
 
-#### Step 12: Build System and Integration
+#### Step 13: Build System and Integration
 - [ ] Complete Makefile with all targets
 - [ ] Add comprehensive integration tests
 - [ ] Cross-platform build support
 - [ ] Final documentation and security review
 
-#### Step 13: CI/CD Implementation
+#### Step 14: CI/CD Implementation
 - [ ] Implement format, lint, test, and build pipeline for all commits
 - [ ] Add pull request checks and status badges
 - [ ] Implement SLSA compliant release pipeline

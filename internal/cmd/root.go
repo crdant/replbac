@@ -60,8 +60,8 @@ Key features:
 		}
 		
 		// Only validate configuration for commands that need API access
-		// Skip validation for version and help commands
-		if cmd.Name() != "version" && cmd.Name() != "help" && cmd.Name() != "completion" {
+		// Skip validation for version, help, completion, and man commands
+		if cmd.Name() != "version" && cmd.Name() != "help" && cmd.Name() != "completion" && cmd.Name() != "man" {
 			if err := config.ValidateConfig(cfg); err != nil {
 				return fmt.Errorf("invalid configuration: %w", err)
 			}
