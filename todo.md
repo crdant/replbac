@@ -70,7 +70,7 @@
 - [x] Document environment variables in help alongside the equivalent CLI flags
 - [x] Let's get rid of the configuration for the API endpoint since there's only one
 - [x] Determine if we should make any of our package public and add to do items to this document for each one under Step 12
-- [ ] Add man page
+- [x] Add man page
 
 #### Step 11: Add membership
 - [ ] Add `members` field to Role model in `internal/models/models.go`
