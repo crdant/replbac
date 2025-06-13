@@ -8,7 +8,6 @@ import (
 	"time"
 )
 
-
 func TestClientWithRetry(t *testing.T) {
 	tests := []struct {
 		name           string

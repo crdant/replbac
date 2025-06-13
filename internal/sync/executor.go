@@ -111,7 +111,7 @@ func (e *Executor) ExecutePlan(plan SyncPlan) ExecutionResult {
 // ExecutePlanDryRun simulates executing a sync plan without making actual API calls
 func (e *Executor) ExecutePlanDryRun(plan SyncPlan) ExecutionResult {
 	e.logger.Info("executing sync plan in dry-run mode: %d creates, %d updates, %d deletes", len(plan.Creates), len(plan.Updates), len(plan.Deletes))
-	
+
 	result := ExecutionResult{
 		Created: len(plan.Creates),
 		Updated: len(plan.Updates),
@@ -139,21 +139,21 @@ func (e *Executor) ExecutePlanDryRunWithDiffs(plan SyncPlan) ExecutionResult {
 
 	// Add create details
 	for _, role := range plan.Creates {
-		detailsBuilder = append(detailsBuilder, 
-			fmt.Sprintf("CREATE: %s (allowed: %v, denied: %v)", 
+		detailsBuilder = append(detailsBuilder,
+			fmt.Sprintf("CREATE: %s (allowed: %v, denied: %v)",
 				role.Name, role.Resources.Allowed, role.Resources.Denied))
 	}
 
 	// Add update details with diffs
 	for _, update := range plan.Updates {
 		detailsBuilder = append(detailsBuilder, fmt.Sprintf("UPDATE: %s", update.Name))
-		
+
 		// Compare allowed resources
 		allowedDiff := generateResourceDiff("allowed", update.Remote.Resources.Allowed, update.Local.Resources.Allowed)
 		if allowedDiff != "" {
 			detailsBuilder = append(detailsBuilder, fmt.Sprintf("  %s", allowedDiff))
 		}
-		
+
 		// Compare denied resources
 		deniedDiff := generateResourceDiff("denied", update.Remote.Resources.Denied, update.Local.Resources.Denied)
 		if deniedDiff != "" {
@@ -226,12 +226,12 @@ func (r ExecutionResult) IsSuccess() bool {
 func (r ExecutionResult) DetailedSummary() string {
 	// Start with basic summary
 	summary := r.Summary()
-	
+
 	// If we have detailed information, append it
 	if r.DetailedInfo != "" {
 		summary += "\n\nDetails:\n" + r.DetailedInfo
 	}
-	
+
 	return summary
 }
 
@@ -248,7 +248,7 @@ func generateResourceDiff(resourceType string, oldResources, newResources []stri
 	// Create maps for efficient lookup
 	oldMap := make(map[string]bool)
 	newMap := make(map[string]bool)
-	
+
 	for _, resource := range oldResources {
 		oldMap[resource] = true
 	}
@@ -258,14 +258,14 @@ func generateResourceDiff(resourceType string, oldResources, newResources []stri
 
 	// Find additions and removals
 	var additions, removals []string
-	
+
 	// Check for additions (in new but not in old)
 	for resource := range newMap {
 		if !oldMap[resource] {
 			additions = append(additions, resource)
 		}
 	}
-	
+
 	// Check for removals (in old but not in new)
 	for resource := range oldMap {
 		if !newMap[resource] {
@@ -279,13 +279,13 @@ func generateResourceDiff(resourceType string, oldResources, newResources []stri
 
 	// Build diff string
 	var diffParts []string
-	
+
 	if len(additions) > 0 {
 		for _, addition := range additions {
 			diffParts = append(diffParts, fmt.Sprintf("+ %s: %s", resourceType, addition))
 		}
 	}
-	
+
 	if len(removals) > 0 {
 		for _, removal := range removals {
 			diffParts = append(diffParts, fmt.Sprintf("- %s: %s", resourceType, removal))
@@ -378,7 +378,7 @@ func (e *ExecutorWithMembers) assignMembersToRole(roleName string, members []str
 // ExecutePlanDryRun simulates executing a sync plan without making actual API calls
 func (e *ExecutorWithMembers) ExecutePlanDryRun(plan SyncPlan) ExecutionResult {
 	e.logger.Info("executing sync plan in dry-run mode with member support: %d creates, %d updates, %d deletes", len(plan.Creates), len(plan.Updates), len(plan.Deletes))
-	
+
 	result := ExecutionResult{
 		Created: len(plan.Creates),
 		Updated: len(plan.Updates),
@@ -406,21 +406,21 @@ func (e *ExecutorWithMembers) ExecutePlanDryRunWithDiffs(plan SyncPlan) Executio
 
 	// Add create details
 	for _, role := range plan.Creates {
-		detailsBuilder = append(detailsBuilder, 
-			fmt.Sprintf("CREATE: %s (allowed: %v, denied: %v, members: %v)", 
+		detailsBuilder = append(detailsBuilder,
+			fmt.Sprintf("CREATE: %s (allowed: %v, denied: %v, members: %v)",
 				role.Name, role.Resources.Allowed, role.Resources.Denied, role.Members))
 	}
 
 	// Add update details with diffs
 	for _, update := range plan.Updates {
 		detailsBuilder = append(detailsBuilder, fmt.Sprintf("UPDATE: %s", update.Name))
-		
+
 		// Compare allowed resources
 		allowedDiff := generateResourceDiff("allowed", update.Remote.Resources.Allowed, update.Local.Resources.Allowed)
 		if allowedDiff != "" {
 			detailsBuilder = append(detailsBuilder, fmt.Sprintf("  %s", allowedDiff))
 		}
-		
+
 		// Compare denied resources
 		deniedDiff := generateResourceDiff("denied", update.Remote.Resources.Denied, update.Local.Resources.Denied)
 		if deniedDiff != "" {

@@ -17,7 +17,7 @@ func TestGenerateManPage(t *testing.T) {
 			expected: []string{
 				".TH REPLBAC 1",
 				".SH NAME",
-				".SH SYNOPSIS", 
+				".SH SYNOPSIS",
 				".SH DESCRIPTION",
 				".SH COMMANDS",
 				".SH OPTIONS",
@@ -32,14 +32,14 @@ func TestGenerateManPage(t *testing.T) {
 			name: "man page contains command descriptions",
 			expected: []string{
 				"sync",
-				"pull", 
+				"pull",
 				"version",
 				"Synchronize local role files",
 				"Pull role definitions from",
 			},
 		},
 		{
-			name: "man page contains flag descriptions", 
+			name: "man page contains flag descriptions",
 			expected: []string{
 				"--api-token",
 				"--config",
@@ -54,7 +54,7 @@ func TestGenerateManPage(t *testing.T) {
 			name: "man page contains environment variables",
 			expected: []string{
 				"REPLICATED_API_TOKEN",
-				"REPLBAC_API_TOKEN", 
+				"REPLBAC_API_TOKEN",
 				"REPLBAC_CONFIG",
 				"REPLBAC_CONFIRM",
 				"REPLBAC_LOG_LEVEL",

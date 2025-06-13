@@ -8,24 +8,24 @@ import (
 // TestRolesDirFlagRemoval tests that --roles-dir flag has been removed from commands
 func TestRolesDirFlagRemoval(t *testing.T) {
 	tests := []struct {
-		name        string
-		command     string
-		args        []string
-		expectError bool
+		name          string
+		command       string
+		args          []string
+		expectError   bool
 		errorContains string
 	}{
 		{
-			name:        "sync rejects --roles-dir flag",
-			command:     "sync",
-			args:        []string{"--roles-dir", "test"},
-			expectError: true,
+			name:          "sync rejects --roles-dir flag",
+			command:       "sync",
+			args:          []string{"--roles-dir", "test"},
+			expectError:   true,
 			errorContains: "unknown flag: --roles-dir",
 		},
 		{
-			name:        "pull rejects --roles-dir flag", 
-			command:     "pull",
-			args:        []string{"--roles-dir", "test"},
-			expectError: true,
+			name:          "pull rejects --roles-dir flag",
+			command:       "pull",
+			args:          []string{"--roles-dir", "test"},
+			expectError:   true,
 			errorContains: "unknown flag: --roles-dir",
 		},
 		{
@@ -36,7 +36,7 @@ func TestRolesDirFlagRemoval(t *testing.T) {
 		},
 		{
 			name:        "pull accepts positional directory argument",
-			command:     "pull", 
+			command:     "pull",
 			args:        []string{"test-dir", "--help"},
 			expectError: false,
 		},
@@ -46,11 +46,11 @@ func TestRolesDirFlagRemoval(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create a fresh root command for each test
 			cmd := createTestRootCmd()
-			
+
 			var output bytes.Buffer
 			cmd.SetOut(&output)
 			cmd.SetErr(&output)
-			
+
 			// Set the command and args
 			cmdArgs := append([]string{tt.command}, tt.args...)
 			cmd.SetArgs(cmdArgs)
@@ -99,11 +99,11 @@ func TestPositionalArgumentFunctionality(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cmd := createTestRootCmd()
-			
+
 			var output bytes.Buffer
 			cmd.SetOut(&output)
 			cmd.SetErr(&output)
-			
+
 			cmdArgs := append([]string{tt.command}, tt.args...)
 			cmd.SetArgs(cmdArgs)
 
@@ -123,13 +123,13 @@ func TestPositionalArgumentFunctionality(t *testing.T) {
 
 // Helper function to check if a string contains a substring
 func containsString(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(substr) == 0 || 
-		   (len(s) > len(substr) && func() bool {
-			   for i := 0; i <= len(s)-len(substr); i++ {
-				   if s[i:i+len(substr)] == substr {
-					   return true
-				   }
-			   }
-			   return false
-		   }()))
+	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
+		(len(s) > len(substr) && func() bool {
+			for i := 0; i <= len(s)-len(substr); i++ {
+				if s[i:i+len(substr)] == substr {
+					return true
+				}
+			}
+			return false
+		}()))
 }

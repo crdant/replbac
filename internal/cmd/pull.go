@@ -15,11 +15,11 @@ import (
 )
 
 var (
-	pullForce    bool
-	pullDryRun   bool
-	pullDiff     bool
-	pullVerbose  bool
-	pullDebug    bool
+	pullForce   bool
+	pullDryRun  bool
+	pullDiff    bool
+	pullVerbose bool
+	pullDebug   bool
 )
 
 // pullCmd represents the pull command
@@ -53,7 +53,7 @@ Environment Variables:
 
 func init() {
 	rootCmd.AddCommand(pullCmd)
-	
+
 	// Pull-specific flags
 	pullCmd.Flags().BoolVar(&pullForce, "force", false, "overwrite existing files")
 	pullCmd.Flags().BoolVar(&pullDryRun, "dry-run", false, "preview changes without applying them")
@@ -82,7 +82,7 @@ func RunPullCommand(cmd *cobra.Command, args []string, config models.Config, dry
 	if cmd.ErrOrStderr() == os.Stdout {
 		cmd.SetErr(os.Stderr)
 	}
-	
+
 	// Create logger that outputs to stderr
 	var logger *logging.Logger
 	if pullDebug {
@@ -90,7 +90,7 @@ func RunPullCommand(cmd *cobra.Command, args []string, config models.Config, dry
 	} else {
 		logger = logging.NewLogger(cmd.ErrOrStderr(), pullVerbose)
 	}
-	
+
 	// Determine target directory
 	targetDir := "."
 	if len(args) > 0 {
@@ -107,7 +107,7 @@ func RunPullCommand(cmd *cobra.Command, args []string, config models.Config, dry
 
 	cmd.Printf("Pulling role files in directory: %s\n", targetDir)
 	logger.Debug("starting pull operation in directory: %s", targetDir)
-	
+
 	if force && !dryRun {
 		cmd.Println("FORCE: Existing files will be overwritten")
 		logger.Debug("force mode enabled - existing files will be overwritten")
@@ -120,7 +120,7 @@ func RunPullCommand(cmd *cobra.Command, args []string, config models.Config, dry
 		logger.Error("failed to create API client: %v", err)
 		return fmt.Errorf("failed to create API client: %w", err)
 	}
-	
+
 	return RunPullCommandWithClient(cmd, targetDir, dryRun, diff, force, client)
 }
 
@@ -140,7 +140,7 @@ func RunPullCommandWithClient(cmd *cobra.Command, outputDir string, dryRun, diff
 	}
 
 	cmd.Printf("Downloaded %d role(s) from API\n", len(apiRoles))
-	
+
 	// Initialize result tracking
 	result := PullResult{Total: len(apiRoles), DryRun: dryRun}
 
@@ -163,14 +163,14 @@ func RunPullCommandWithClient(cmd *cobra.Command, outputDir string, dryRun, diff
 			if existingBytes, readErr := os.ReadFile(filePath); readErr == nil {
 				existingContent = string(existingBytes)
 			}
-			
+
 			if force || dryRun {
 				// Generate new content
 				newContent, err := roles.GenerateRoleYAML(role)
 				if err != nil {
 					return fmt.Errorf("failed to generate YAML for role %s: %w", role.Name, err)
 				}
-				
+
 				if dryRun {
 					if existingContent != newContent {
 						if diff {
@@ -242,13 +242,13 @@ func RunPullCommandWithClient(cmd *cobra.Command, outputDir string, dryRun, diff
 func showDiff(cmd *cobra.Command, oldContent, newContent string) {
 	oldLines := strings.Split(oldContent, "\n")
 	newLines := strings.Split(newContent, "\n")
-	
+
 	// Simple line-by-line diff
 	maxLines := len(oldLines)
 	if len(newLines) > maxLines {
 		maxLines = len(newLines)
 	}
-	
+
 	for i := 0; i < maxLines; i++ {
 		var oldLine, newLine string
 		if i < len(oldLines) {
@@ -257,7 +257,7 @@ func showDiff(cmd *cobra.Command, oldContent, newContent string) {
 		if i < len(newLines) {
 			newLine = newLines[i]
 		}
-		
+
 		if oldLine != newLine {
 			if oldLine != "" {
 				cmd.Printf("- %s\n", oldLine)

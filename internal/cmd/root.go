@@ -36,18 +36,18 @@ Key features:
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		// Load configuration
 		var err error
-		
+
 		// If config file is specified, use it; otherwise use defaults
 		if cfgFile != "" {
 			cfg, err = config.LoadConfig(cfgFile)
 		} else {
 			cfg, err = config.LoadConfigWithDefaults(nil)
 		}
-		
+
 		if err != nil {
 			return fmt.Errorf("failed to load configuration: %w", err)
 		}
-		
+
 		// Override config with command-line flags if provided
 		if apiToken != "" {
 			cfg.APIToken = apiToken
@@ -58,7 +58,7 @@ Key features:
 		if logLevel != "" {
 			cfg.LogLevel = logLevel
 		}
-		
+
 		// Only validate configuration for commands that need API access
 		// Skip validation for version, help, and completion commands
 		if cmd.Name() != "version" && cmd.Name() != "help" && cmd.Name() != "completion" {
@@ -66,7 +66,7 @@ Key features:
 				return fmt.Errorf("invalid configuration: %w", err)
 			}
 		}
-		
+
 		return nil
 	},
 }
@@ -92,10 +92,10 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&apiToken, "api-token", "", "Replicated API token (env: REPLICATED_API_TOKEN, REPLBAC_API_TOKEN)")
 	rootCmd.PersistentFlags().BoolVar(&confirm, "confirm", false, "automatically confirm destructive operations (env: REPLBAC_CONFIRM)")
 	rootCmd.PersistentFlags().StringVar(&logLevel, "log-level", "", "log level: debug, info, warn, error (env: REPLBAC_LOG_LEVEL)")
-	
+
 	// Mark sensitive flags
 	rootCmd.PersistentFlags().MarkHidden("api-token")
-	
+
 	// Override help function to position environment variables before final Use message
 	originalHelpFunc := rootCmd.HelpFunc()
 	rootCmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
@@ -109,7 +109,7 @@ func init() {
 			helpText := buf.String()
 			useMessage := `Use "replbac [command] --help" for more information about a command.`
 			if strings.Contains(helpText, useMessage) {
-				envVars := "\nEnvironment Variables:\n" + 
+				envVars := "\nEnvironment Variables:\n" +
 					"  Configuration can be provided via environment variables as an alternative to CLI flags:\n\n" +
 					"  REPLICATED_API_TOKEN    Replicated API token (for replicated CLI compatibility)\n" +
 					"  REPLBAC_API_TOKEN       Replicated API token (alternative to REPLICATED_API_TOKEN)\n" +
@@ -118,7 +118,7 @@ func init() {
 					"  REPLBAC_LOG_LEVEL       Log level (debug, info, warn, error)\n\n" +
 					"  Environment variables have lower precedence than CLI flags but higher than config files.\n" +
 					"  REPLICATED_API_TOKEN is checked first for compatibility with the replicated CLI.\n\n"
-				helpText = strings.Replace(helpText, useMessage, envVars + useMessage, 1)
+				helpText = strings.Replace(helpText, useMessage, envVars+useMessage, 1)
 			}
 			cmd.Print(helpText)
 		} else {

@@ -11,55 +11,55 @@ func TestLogSanitization(t *testing.T) {
 		name     string
 		logMsg   string
 		args     []interface{}
-		expected []string    // Strings that should be present in output
-		blocked  []string    // Strings that should NOT be present in output
+		expected []string // Strings that should be present in output
+		blocked  []string // Strings that should NOT be present in output
 	}{
 		{
-			name:   "API token in message",
-			logMsg: "connecting to API with token: %s",
-			args:   []interface{}{"abcdef1234567890abcdef1234567890"},
+			name:     "API token in message",
+			logMsg:   "connecting to API with token: %s",
+			args:     []interface{}{"abcdef1234567890abcdef1234567890"},
 			expected: []string{"token: [REDACTED]"},
 			blocked:  []string{"abcdef1234567890abcdef1234567890"},
 		},
 		{
-			name:   "Authorization header",
-			logMsg: "HTTP request headers: Authorization: Bearer %s",
-			args:   []interface{}{"abc123def456ghi789"},
+			name:     "Authorization header",
+			logMsg:   "HTTP request headers: Authorization: Bearer %s",
+			args:     []interface{}{"abc123def456ghi789"},
 			expected: []string{"Authorization: Bearer [REDACTED]"},
 			blocked:  []string{"abc123def456ghi789"},
 		},
 		{
-			name:   "API key in URL",
-			logMsg: "calling endpoint: https://api.example.com/data?api_key=%s&limit=10",
-			args:   []interface{}{"secret-api-key-12345"},
+			name:     "API key in URL",
+			logMsg:   "calling endpoint: https://api.example.com/data?api_key=%s&limit=10",
+			args:     []interface{}{"secret-api-key-12345"},
 			expected: []string{"api_key=[REDACTED]"},
 			blocked:  []string{"secret-api-key-12345"},
 		},
 		{
-			name:   "Password in config",
-			logMsg: "config loaded: password=%s database=%s",
-			args:   []interface{}{"mySecretPassword", "production_db"},
+			name:     "Password in config",
+			logMsg:   "config loaded: password=%s database=%s",
+			args:     []interface{}{"mySecretPassword", "production_db"},
 			expected: []string{"password=[REDACTED]", "production_db"},
 			blocked:  []string{"mySecretPassword"},
 		},
 		{
-			name:   "Multiple sensitive values",
-			logMsg: "credentials: token=%s secret=%s public_key=%s",
-			args:   []interface{}{"longTokenValue12345678901234567890", "mySecret123", "pk_12345"},
+			name:     "Multiple sensitive values",
+			logMsg:   "credentials: token=%s secret=%s public_key=%s",
+			args:     []interface{}{"longTokenValue12345678901234567890", "mySecret123", "pk_12345"},
 			expected: []string{"token=[REDACTED]", "secret=[REDACTED]"},
 			blocked:  []string{"longTokenValue12345678901234567890", "mySecret123"},
 		},
 		{
-			name:   "Normal log message unchanged",
-			logMsg: "processing %d files in directory %s",
-			args:   []interface{}{5, "/home/user/data"},
+			name:     "Normal log message unchanged",
+			logMsg:   "processing %d files in directory %s",
+			args:     []interface{}{5, "/home/user/data"},
 			expected: []string{"processing 5 files", "/home/user/data"},
 			blocked:  []string{},
 		},
 		{
-			name:   "Short strings not redacted",
-			logMsg: "user %s logged in with role %s",
-			args:   []interface{}{"admin", "viewer"},
+			name:     "Short strings not redacted",
+			logMsg:   "user %s logged in with role %s",
+			args:     []interface{}{"admin", "viewer"},
 			expected: []string{"admin", "viewer"},
 			blocked:  []string{"[REDACTED]"},
 		},
@@ -168,7 +168,7 @@ func TestVerboseMode(t *testing.T) {
 
 	// In verbose mode (INFO level), Info, Warn and Error messages should appear
 	logger.Debug("debug message")
-	logger.Info("info message") 
+	logger.Info("info message")
 	logger.Warn("warn message")
 	logger.Error("error message")
 

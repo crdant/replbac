@@ -31,7 +31,7 @@ func TestAPIEndpointRemoval(t *testing.T) {
 				cmd := createTestRootCommand()
 				cmd.SetArgs([]string{"--help"})
 				output, _ := executeCommandToString(cmd)
-				
+
 				if strings.Contains(output, "api-endpoint") {
 					t.Error("Help text should not mention api-endpoint flag")
 				}
@@ -45,12 +45,12 @@ func TestAPIEndpointRemoval(t *testing.T) {
 			testFunc: func(t *testing.T) {
 				// Test that the API endpoint is hardcoded by checking the constant
 				expectedEndpoint := "https://api.replicated.com"
-				
+
 				// Verify the hardcoded constant is correct
 				if models.ReplicatedAPIEndpoint != expectedEndpoint {
 					t.Errorf("Expected hardcoded endpoint %s, got %s", expectedEndpoint, models.ReplicatedAPIEndpoint)
 				}
-				
+
 				// Config struct should not have APIEndpoint field
 				config := models.Config{}
 				_ = config // Just use the config to show it doesn't need APIEndpoint
@@ -64,7 +64,7 @@ func TestAPIEndpointRemoval(t *testing.T) {
 					APIToken: "test-token",
 					// No APIEndpoint set - should use hardcoded value
 				}
-				
+
 				// Validation should not fail due to missing API endpoint
 				// since it should be hardcoded
 				if config.APIToken == "" {
@@ -82,19 +82,19 @@ func TestAPIEndpointRemoval(t *testing.T) {
 // TestHardcodedAPIEndpoint tests that the API endpoint is properly hardcoded
 func TestHardcodedAPIEndpoint(t *testing.T) {
 	expectedEndpoint := "https://api.replicated.com"
-	
+
 	// Test that API client creation uses the hardcoded endpoint
 	config := models.Config{
 		APIToken: "test-token",
 		// APIEndpoint should not be required - it should be hardcoded
 	}
-	
+
 	// The actual validation will be done in the implementation
 	// This test ensures our expectation is clear
 	if config.APIToken == "" {
 		t.Error("APIToken is required for API operations")
 	}
-	
+
 	// The endpoint should be internally set to expectedEndpoint
 	t.Logf("Expected hardcoded endpoint: %s", expectedEndpoint)
 }
@@ -126,12 +126,12 @@ Environment Variables:
   Environment variables have lower precedence than CLI flags but higher than config files.
   REPLICATED_API_TOKEN is checked first for compatibility with the replicated CLI.`,
 	}
-	
+
 	// Add flags WITHOUT api-endpoint
 	cmd.PersistentFlags().String("config", "", "config file path (env: REPLBAC_CONFIG)")
 	cmd.PersistentFlags().String("api-token", "", "Replicated API token (env: REPLICATED_API_TOKEN, REPLBAC_API_TOKEN)")
 	cmd.PersistentFlags().Bool("confirm", false, "automatically confirm destructive operations (env: REPLBAC_CONFIRM)")
 	cmd.PersistentFlags().String("log-level", "", "log level: debug, info, warn, error (env: REPLBAC_LOG_LEVEL)")
-	
+
 	return cmd
 }

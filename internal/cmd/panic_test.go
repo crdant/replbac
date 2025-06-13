@@ -10,10 +10,10 @@ import (
 
 func TestPanicRecovery(t *testing.T) {
 	tests := []struct {
-		name        string
-		panicValue  interface{}
-		expectExit  bool
-		expectLog   string
+		name       string
+		panicValue interface{}
+		expectExit bool
+		expectLog  string
 	}{
 		{
 			name:       "string panic recovered",

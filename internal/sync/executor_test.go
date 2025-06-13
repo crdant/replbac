@@ -20,7 +20,7 @@ type MockAPIClient struct {
 	CreateRoleFunc func(role models.Role) error
 	UpdateRoleFunc func(role models.Role) error
 	DeleteRoleFunc func(roleName string) error
-	
+
 	// Track calls for verification
 	CreatedRoles []models.Role
 	UpdatedRoles []models.Role
@@ -53,14 +53,14 @@ func (m *MockAPIClient) DeleteRole(roleName string) error {
 
 func TestExecutor_ExecutePlan(t *testing.T) {
 	tests := []struct {
-		name           string
-		plan           SyncPlan
-		mockSetup      func(*MockAPIClient)
-		wantCreated    []models.Role
-		wantUpdated    []models.Role
-		wantDeleted    []string
-		wantError      bool
-		errorContains  string
+		name          string
+		plan          SyncPlan
+		mockSetup     func(*MockAPIClient)
+		wantCreated   []models.Role
+		wantUpdated   []models.Role
+		wantDeleted   []string
+		wantError     bool
+		errorContains string
 	}{
 		{
 			name: "empty plan executes successfully",
@@ -485,7 +485,7 @@ func TestExecutor_ExecutePlanDryRun(t *testing.T) {
 
 	mockClient := &MockAPIClient{}
 	executor := NewExecutor(mockClient, createTestLogger())
-	
+
 	result := executor.ExecutePlanDryRun(plan)
 
 	// In dry run mode, no actual API calls should be made
@@ -520,11 +520,11 @@ func TestExecutor_ExecutePlanDryRun(t *testing.T) {
 func TestNewExecutor(t *testing.T) {
 	mockClient := &MockAPIClient{}
 	executor := NewExecutor(mockClient, createTestLogger())
-	
+
 	if executor == nil {
 		t.Error("NewExecutor() returned nil")
 	}
-	
+
 	// Test that executor can be used
 	result := executor.ExecutePlanDryRun(SyncPlan{})
 	if result.Error != nil {
@@ -641,7 +641,7 @@ func TestExecutor_ExecutePlanDryRunWithDiffs(t *testing.T) {
 				},
 				Deletes: []string{"unused-role"},
 			},
-			wantDetailedInfo: true,
+			wantDetailedInfo:  true,
 			wantCreateDetails: []string{"new-viewer", "allowed: [read:*]"},
 			wantUpdateDetails: []string{"service-account", "+ allowed: api:write", "+ denied: admin:*"},
 			wantDeleteDetails: []string{"unused-role"},
@@ -652,7 +652,7 @@ func TestExecutor_ExecutePlanDryRunWithDiffs(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockClient := &MockAPIClient{}
 			executor := NewExecutor(mockClient, createTestLogger())
-			
+
 			result := executor.ExecutePlanDryRunWithDiffs(tt.plan)
 
 			// Verify it's a dry run
@@ -696,9 +696,9 @@ func TestExecutor_ExecutePlanDryRunWithDiffs(t *testing.T) {
 
 func TestExecutionResult_DetailedSummary(t *testing.T) {
 	tests := []struct {
-		name           string
-		result         ExecutionResult
-		wantContains   []string
+		name            string
+		result          ExecutionResult
+		wantContains    []string
 		wantNotContains []string
 	}{
 		{
@@ -753,7 +753,7 @@ func TestExecutionResult_DetailedSummary(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			summary := tt.result.DetailedSummary()
-			
+
 			for _, want := range tt.wantContains {
 				if !containsString(summary, want) {
 					t.Errorf("DetailedSummary() = %q, want to contain %q", summary, want)
@@ -771,11 +771,11 @@ func TestExecutionResult_DetailedSummary(t *testing.T) {
 
 // Helper function to check if a string contains a substring
 func containsString(s, substr string) bool {
-	return len(s) >= len(substr) && 
-		   (s == substr || 
-		    s[:len(substr)] == substr || 
-		    s[len(s)-len(substr):] == substr ||
-		    findInString(s, substr))
+	return len(s) >= len(substr) &&
+		(s == substr ||
+			s[:len(substr)] == substr ||
+			s[len(s)-len(substr):] == substr ||
+			findInString(s, substr))
 }
 
 func findInString(s, substr string) bool {
@@ -789,13 +789,13 @@ func findInString(s, substr string) bool {
 
 func TestExecutor_ExecutePlanWithMembers(t *testing.T) {
 	tests := []struct {
-		name           string
-		plan           SyncPlan
-		wantCreated    int
-		wantUpdated    int
-		wantDeleted    int
-		expectError    bool
-		expectedMembers map[string][]string  // roleName -> members that should be assigned
+		name            string
+		plan            SyncPlan
+		wantCreated     int
+		wantUpdated     int
+		wantDeleted     int
+		expectError     bool
+		expectedMembers map[string][]string // roleName -> members that should be assigned
 	}{
 		{
 			name: "create role with members",
@@ -1010,7 +1010,7 @@ type MockAPIClientWithMembers struct {
 	MockAPIClient
 	GetTeamMembersFunc   func() ([]models.TeamMember, error)
 	AssignMemberRoleFunc func(memberEmail, roleID string) error
-	
+
 	// Track member assignments for verification
 	AssignedMembers map[string][]string // roleName -> list of member emails
 }
@@ -1027,7 +1027,7 @@ func (m *MockAPIClientWithMembers) AssignMemberRole(memberEmail, roleID string) 
 		m.AssignedMembers = make(map[string][]string)
 	}
 	m.AssignedMembers[roleID] = append(m.AssignedMembers[roleID], memberEmail)
-	
+
 	if m.AssignMemberRoleFunc != nil {
 		return m.AssignMemberRoleFunc(memberEmail, roleID)
 	}

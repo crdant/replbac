@@ -17,11 +17,11 @@ import (
 // TestCompleteWorkflows tests end-to-end user workflows with complete CLI integration
 func TestCompleteWorkflows(t *testing.T) {
 	tests := []struct {
-		name                string
-		setupFiles          map[string]string
-		setupRemoteRoles    []models.Role
-		userWorkflow        []WorkflowStep
-		expectFinalState    WorkflowExpectation
+		name                 string
+		setupFiles           map[string]string
+		setupRemoteRoles     []models.Role
+		userWorkflow         []WorkflowStep
+		expectFinalState     WorkflowExpectation
 		expectUserExperience UserExperienceExpectation
 	}{
 		{
@@ -54,7 +54,7 @@ resources:
 				},
 				{
 					description: "user runs actual sync after preview",
-					command:     "sync", 
+					command:     "sync",
 					args:        []string{"roles"},
 					flags:       map[string]string{},
 					expectOutput: []string{
@@ -80,11 +80,11 @@ resources:
 				deletedRoles: []string{},
 			},
 			expectUserExperience: UserExperienceExpectation{
-				totalSteps:          3,
-				progressIndicators:  true,
-				clearErrorMessages:  true,
-				helpfulGuidance:     true,
-				consistentOutput:    true,
+				totalSteps:         3,
+				progressIndicators: true,
+				clearErrorMessages: true,
+				helpfulGuidance:    true,
+				consistentOutput:   true,
 			},
 		},
 		{
@@ -127,7 +127,7 @@ resources:
 						"Will create",
 						"admin",
 						"Will update",
-						"editor", 
+						"editor",
 						"Will delete",
 						"Sync completed:",
 					},
@@ -139,12 +139,12 @@ resources:
 				deletedRoles: []string{"old-role"},
 			},
 			expectUserExperience: UserExperienceExpectation{
-				totalSteps:          1,
-				progressIndicators:  true,
-				clearErrorMessages:  true,
-				helpfulGuidance:     true,
-				consistentOutput:    true,
-				verboseLogging:      true,
+				totalSteps:         1,
+				progressIndicators: true,
+				clearErrorMessages: true,
+				helpfulGuidance:    true,
+				consistentOutput:   true,
+				verboseLogging:     true,
 			},
 		},
 		{
@@ -182,11 +182,11 @@ resources:
 				deletedRoles: []string{},
 			},
 			expectUserExperience: UserExperienceExpectation{
-				totalSteps:          1,
-				progressIndicators:  true,
-				clearErrorMessages:  true,
-				helpfulGuidance:     true,
-				consistentOutput:    true,
+				totalSteps:            1,
+				progressIndicators:    true,
+				clearErrorMessages:    true,
+				helpfulGuidance:       true,
+				consistentOutput:      true,
 				gracefulErrorHandling: true,
 			},
 		},
@@ -242,11 +242,11 @@ resources:
 				deletedRoles: []string{"prod-admin", "prod-viewer"},
 			},
 			expectUserExperience: UserExperienceExpectation{
-				totalSteps:          2,
-				progressIndicators:  true,
-				clearErrorMessages:  true,
-				helpfulGuidance:     true,
-				consistentOutput:    true,
+				totalSteps:         2,
+				progressIndicators: true,
+				clearErrorMessages: true,
+				helpfulGuidance:    true,
+				consistentOutput:   true,
 			},
 		},
 	}
@@ -638,12 +638,12 @@ func NewWorkflowSyncCommand(mockClient *WorkflowMockClient) *cobra.Command {
 			return RunSyncCommandWithClient(cmd, args, mockClient, dryRun, delete, false)
 		},
 	}
-	
+
 	cmd.Flags().Bool("dry-run", false, "preview changes without applying them")
 	cmd.Flags().String("roles-dir", "", "directory containing role YAML files")
 	cmd.Flags().Bool("delete", false, "delete remote roles not present in local files")
 	cmd.Flags().Bool("verbose", false, "enable verbose logging")
-	
+
 	return cmd
 }
 

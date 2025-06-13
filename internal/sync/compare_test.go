@@ -585,10 +585,10 @@ func TestRolesEqual_WithMembers(t *testing.T) {
 
 func TestCompareRoles_WithMembers(t *testing.T) {
 	tests := []struct {
-		name      string
-		local     []models.Role
-		remote    []models.Role
-		wantPlan  SyncPlan
+		name     string
+		local    []models.Role
+		remote   []models.Role
+		wantPlan SyncPlan
 	}{
 		{
 			name: "role member changes require update",
