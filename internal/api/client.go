@@ -197,6 +197,34 @@ func (c *Client) GetRoles() ([]models.Role, error) {
 		roles = append(roles, role)
 	}
 
+	c.logger.Debug("fetching team members to correlate with roles")
+	// Fetch team members and correlate with roles
+	members, err := c.GetTeamMembers()
+	if err != nil {
+		c.logger.Warn("failed to fetch team members (roles will not include member data): %v", err)
+		// Continue without member data rather than failing completely
+	} else {
+		c.logger.Debug("correlating %d members with roles", len(members))
+		// Group members by policy ID
+		membersByPolicy := make(map[string][]string)
+		for _, member := range members {
+			if member.PolicyID != "" {
+				// Use the member ID (email) for the members list
+				membersByPolicy[member.PolicyID] = append(membersByPolicy[member.PolicyID], member.ID)
+			}
+		}
+
+		// Populate member data for each role
+		for i := range roles {
+			// Find members for this role by policy ID
+			policyID := policies[i].ID
+			if memberEmails, found := membersByPolicy[policyID]; found {
+				roles[i].Members = memberEmails
+				c.logger.Debug("role %s has %d members", roles[i].Name, len(memberEmails))
+			}
+		}
+	}
+
 	c.logger.Debug("successfully retrieved %d roles from API", len(roles))
 	return roles, nil
 }
@@ -626,7 +654,7 @@ func (c *Client) GetTeamMembersWithContext(ctx context.Context) ([]models.TeamMe
 		c.logger.Debug("GetTeamMembers completed in %v", time.Since(start))
 	}()
 
-	url := c.baseURL + "/vendor/v3/team/members"
+	url := c.baseURL + "/v1/team/members"
 	c.logger.Debug("fetching team members from endpoint: %s", url)
 
 	req, err := http.NewRequest(http.MethodGet, url, nil)
@@ -659,17 +687,15 @@ func (c *Client) GetTeamMembersWithContext(ctx context.Context) ([]models.TeamMe
 
 	c.logger.Debug("received response body of %d bytes", len(body))
 	
-	// Parse the response which has a "members" wrapper
-	var response struct {
-		Members []models.TeamMember `json:"members"`
-	}
-	if err := json.Unmarshal(body, &response); err != nil {
+	// Parse the response - /v1/team/members returns an array directly
+	var members []models.TeamMember
+	if err := json.Unmarshal(body, &members); err != nil {
 		c.logger.Error("failed to parse JSON response from %s: %v", url, err)
 		return nil, fmt.Errorf("failed to parse response: %w", err)
 	}
 
-	c.logger.Info("successfully fetched %d team members from API", len(response.Members))
-	return response.Members, nil
+	c.logger.Info("successfully fetched %d team members from API", len(members))
+	return members, nil
 }
 
 // AssignMemberRole assigns a role to a team member via the API

@@ -1,0 +1,9 @@
+# WARNING: The 'id' field is managed by the Replicated API and should not be modified manually.
+# Changing the ID will cause sync operations to fail.
+
+id: sBQUfKnvbhEZEUBevHf1ovi3qx20BfZ6
+name: Admin
+resources:
+    allowed:
+        - '**/*'
+    denied: []
