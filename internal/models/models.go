@@ -22,6 +22,7 @@ type Role struct {
 	ID        string    `yaml:"id,omitempty" json:"id,omitempty"`
 	Name      string    `yaml:"name" json:"name"`
 	Resources Resources `yaml:"resources" json:"resources"`
+	Members   []string  `yaml:"members,omitempty" json:"members,omitempty"`
 }
 
 // APIRole represents a role as expected by the Replicated API with v1 wrapper
