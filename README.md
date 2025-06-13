@@ -18,7 +18,7 @@
 
 ## 📋 Requirements
 
-- Go 1.16 or later (for building from source)
+- Go 1.23 or later (for building from source)
 - A Replicated Vendor account with API token
 
 ## 🔧 Installation
