@@ -153,6 +153,92 @@ resources:
     - "kots/app/*/admin"
 ```
 
+## Member Management
+
+`replbac` supports team member assignment to roles through the `members` field in YAML files. This enables complete role-based access control by associating team members with their appropriate roles.
+
+### Member Assignment
+
+Add team members to roles using email addresses:
+
+```yaml
+# admin-with-members.yaml
+name: admin
+resources:
+  allowed:
+    - "**/*"
+  denied: []
+members:
+  - admin@example.com
+  - manager@example.com
+  - lead@example.com
+```
+
+```yaml
+# viewer-with-members.yaml
+name: viewer
+resources:
+  allowed:
+    - "**/read"
+    - "**/list"
+  denied:
+    - "admin/**"
+    - "**/delete"
+members:
+  - viewer1@example.com
+  - viewer2@example.com
+  - readonly@example.com
+```
+
+### Member Validation Rules
+
+`replbac` enforces strict member assignment validation:
+
+- **Unique Assignment**: Each team member can only be assigned to one role
+- **Email Format**: Members must be specified as valid email addresses
+- **No Duplicates**: A member cannot appear multiple times in the same role
+- **Automatic Cleanup**: Members removed from all roles are automatically deleted from the team (with confirmation)
+
+### Member Sync Operations
+
+When syncing roles with members:
+
+```bash
+# Sync roles and member assignments
+replbac sync
+
+# Preview member changes
+replbac sync --dry-run
+
+# View detailed member assignment changes
+replbac sync --diff
+```
+
+#### Member Assignment Process
+
+1. **Role Sync**: First, role definitions are synchronized
+2. **Member Assignment**: New members are assigned to their roles
+3. **Member Cleanup**: Members removed from all roles are identified
+4. **Confirmation**: User is prompted to confirm member deletions
+5. **Deletion**: Confirmed orphaned members are removed from the team
+
+#### Member Deletion Confirmation
+
+When members are removed from all roles, `replbac` will prompt for confirmation:
+
+```
+This operation will permanently delete 2 team member(s) from the API:
+  - former-employee@example.com
+  - contractor@example.com
+Do you want to continue? (y/N): 
+```
+
+Use `--force` to skip confirmation prompts in automated environments:
+
+```bash
+replbac sync --force
+```
+
 ### Show Version Information
 
 ```bash

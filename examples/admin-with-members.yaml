@@ -1,0 +1,10 @@
+# Example: Admin role with team member assignments
+name: admin
+resources:
+  allowed:
+    - "**/*"
+  denied: []
+members:
+  - admin@example.com
+  - manager@example.com
+  - lead@example.com
