@@ -16,9 +16,22 @@ type APIClient interface {
 	DeleteRole(roleName string) error
 }
 
+// APIClientWithMembers extends APIClient with member management operations
+type APIClientWithMembers interface {
+	APIClient
+	GetTeamMembers() ([]models.TeamMember, error)
+	AssignMemberRole(memberEmail, roleID string) error
+}
+
 // Executor handles the execution of sync plans
 type Executor struct {
 	client APIClient
+	logger *logging.Logger
+}
+
+// ExecutorWithMembers handles the execution of sync plans including member assignments
+type ExecutorWithMembers struct {
+	client APIClientWithMembers
 	logger *logging.Logger
 }
 
@@ -35,6 +48,14 @@ type ExecutionResult struct {
 // NewExecutor creates a new sync executor with the given API client
 func NewExecutor(client APIClient, logger *logging.Logger) *Executor {
 	return &Executor{
+		client: client,
+		logger: logger,
+	}
+}
+
+// NewExecutorWithMembers creates a new sync executor with member management support
+func NewExecutorWithMembers(client APIClientWithMembers, logger *logging.Logger) *ExecutorWithMembers {
+	return &ExecutorWithMembers{
 		client: client,
 		logger: logger,
 	}
@@ -272,4 +293,152 @@ func generateResourceDiff(resourceType string, oldResources, newResources []stri
 	}
 
 	return strings.Join(diffParts, "\n")
+}
+
+// ExecutePlan executes a sync plan by making actual API calls including member assignments
+func (e *ExecutorWithMembers) ExecutePlan(plan SyncPlan) ExecutionResult {
+	e.logger.Info("executing sync plan with member support: %d creates, %d updates, %d deletes", len(plan.Creates), len(plan.Updates), len(plan.Deletes))
+	result := ExecutionResult{
+		DryRun: false,
+	}
+
+	// Execute creates with member assignments
+	for _, role := range plan.Creates {
+		e.logger.Debug("creating role: %s", role.Name)
+		if err := e.client.CreateRole(role); err != nil {
+			e.logger.Error("failed to create role %s: %v", role.Name, err)
+			result.Error = fmt.Errorf("failed to create role '%s': %w", role.Name, err)
+			return result
+		}
+		e.logger.Info("successfully created role: %s", role.Name)
+		result.Created++
+
+		// Assign members to the newly created role
+		if err := e.assignMembersToRole(role.Name, role.Members); err != nil {
+			e.logger.Error("failed to assign members to role %s: %v", role.Name, err)
+			result.Error = fmt.Errorf("failed to assign members to role '%s': %w", role.Name, err)
+			return result
+		}
+	}
+
+	// Execute updates with member assignments
+	for _, update := range plan.Updates {
+		e.logger.Debug("updating role: %s", update.Name)
+		if err := e.client.UpdateRole(update.Local); err != nil {
+			e.logger.Error("failed to update role %s: %v", update.Name, err)
+			result.Error = fmt.Errorf("failed to update role '%s': %w", update.Name, err)
+			return result
+		}
+		e.logger.Info("successfully updated role: %s", update.Name)
+		result.Updated++
+
+		// Update member assignments for the role
+		if err := e.assignMembersToRole(update.Name, update.Local.Members); err != nil {
+			e.logger.Error("failed to assign members to role %s: %v", update.Name, err)
+			result.Error = fmt.Errorf("failed to assign members to role '%s': %w", update.Name, err)
+			return result
+		}
+	}
+
+	// Execute deletes
+	for _, roleName := range plan.Deletes {
+		e.logger.Debug("deleting role: %s", roleName)
+		if err := e.client.DeleteRole(roleName); err != nil {
+			e.logger.Error("failed to delete role %s: %v", roleName, err)
+			result.Error = fmt.Errorf("failed to delete role '%s': %w", roleName, err)
+			return result
+		}
+		e.logger.Info("successfully deleted role: %s", roleName)
+		result.Deleted++
+	}
+
+	e.logger.Info("sync plan execution completed successfully")
+	return result
+}
+
+// assignMembersToRole assigns all specified members to a role
+func (e *ExecutorWithMembers) assignMembersToRole(roleName string, members []string) error {
+	if len(members) == 0 {
+		e.logger.Debug("no members to assign to role: %s", roleName)
+		return nil
+	}
+
+	e.logger.Debug("assigning %d members to role: %s", len(members), roleName)
+	for _, memberEmail := range members {
+		e.logger.Debug("assigning member %s to role %s", memberEmail, roleName)
+		if err := e.client.AssignMemberRole(memberEmail, roleName); err != nil {
+			e.logger.Error("failed to assign member %s to role %s: %v", memberEmail, roleName, err)
+			return fmt.Errorf("failed to assign member '%s' to role '%s': %w", memberEmail, roleName, err)
+		}
+	}
+	e.logger.Info("successfully assigned %d members to role: %s", len(members), roleName)
+	return nil
+}
+
+// ExecutePlanDryRun simulates executing a sync plan without making actual API calls
+func (e *ExecutorWithMembers) ExecutePlanDryRun(plan SyncPlan) ExecutionResult {
+	e.logger.Info("executing sync plan in dry-run mode with member support: %d creates, %d updates, %d deletes", len(plan.Creates), len(plan.Updates), len(plan.Deletes))
+	
+	result := ExecutionResult{
+		Created: len(plan.Creates),
+		Updated: len(plan.Updates),
+		Deleted: len(plan.Deletes),
+		DryRun:  true,
+		Error:   nil,
+	}
+
+	e.logger.Debug("dry-run completed - no actual changes made")
+	return result
+}
+
+// ExecutePlanDryRunWithDiffs simulates executing a sync plan with detailed diff information including members
+func (e *ExecutorWithMembers) ExecutePlanDryRunWithDiffs(plan SyncPlan) ExecutionResult {
+	result := ExecutionResult{
+		Created: len(plan.Creates),
+		Updated: len(plan.Updates),
+		Deleted: len(plan.Deletes),
+		DryRun:  true,
+		Error:   nil,
+	}
+
+	// Generate detailed diff information
+	detailsBuilder := make([]string, 0)
+
+	// Add create details
+	for _, role := range plan.Creates {
+		detailsBuilder = append(detailsBuilder, 
+			fmt.Sprintf("CREATE: %s (allowed: %v, denied: %v, members: %v)", 
+				role.Name, role.Resources.Allowed, role.Resources.Denied, role.Members))
+	}
+
+	// Add update details with diffs
+	for _, update := range plan.Updates {
+		detailsBuilder = append(detailsBuilder, fmt.Sprintf("UPDATE: %s", update.Name))
+		
+		// Compare allowed resources
+		allowedDiff := generateResourceDiff("allowed", update.Remote.Resources.Allowed, update.Local.Resources.Allowed)
+		if allowedDiff != "" {
+			detailsBuilder = append(detailsBuilder, fmt.Sprintf("  %s", allowedDiff))
+		}
+		
+		// Compare denied resources
+		deniedDiff := generateResourceDiff("denied", update.Remote.Resources.Denied, update.Local.Resources.Denied)
+		if deniedDiff != "" {
+			detailsBuilder = append(detailsBuilder, fmt.Sprintf("  %s", deniedDiff))
+		}
+
+		// Compare members
+		membersDiff := generateResourceDiff("members", update.Remote.Members, update.Local.Members)
+		if membersDiff != "" {
+			detailsBuilder = append(detailsBuilder, fmt.Sprintf("  %s", membersDiff))
+		}
+	}
+
+	// Add delete details
+	for _, roleName := range plan.Deletes {
+		detailsBuilder = append(detailsBuilder, fmt.Sprintf("DELETE: %s", roleName))
+	}
+
+	result.DetailedInfo = strings.Join(detailsBuilder, "\n")
+	return result
 }
