@@ -20,15 +20,24 @@
 
 ### From Binary Release
 
-Download the latest release for your platform from the [Releases](https://github.com/crdant/replbac/releases) page.
+Download the latest release tarball for your platform from the [Releases](https://github.com/crdant/replbac/releases) page.
 
 ```bash
+# Download and extract (replace with your platform)
+curl -L https://github.com/crdant/replbac/releases/latest/download/replbac-linux-amd64.tar.gz | tar xz
+
 # Make it executable (Linux/macOS)
 chmod +x replbac
 
 # Move to a directory in your PATH
 sudo mv replbac /usr/local/bin/
 ```
+
+For other platforms, replace `linux-amd64` with:
+- `darwin-amd64` (macOS Intel)
+- `darwin-arm64` (macOS Apple Silicon)
+- `linux-arm64` (Linux ARM64)
+- `windows-amd64` (Windows)
 
 ### Using Go
 
@@ -151,6 +160,92 @@ resources:
     - "kots/app/*/write"
     - "kots/app/*/delete"
     - "kots/app/*/admin"
+```
+
+## Member Management
+
+`replbac` supports team member assignment to roles through the `members` field in YAML files. This enables complete role-based access control by associating team members with their appropriate roles.
+
+### Member Assignment
+
+Add team members to roles using email addresses:
+
+```yaml
+# admin-with-members.yaml
+name: admin
+resources:
+  allowed:
+    - "**/*"
+  denied: []
+members:
+  - admin@example.com
+  - manager@example.com
+  - lead@example.com
+```
+
+```yaml
+# viewer-with-members.yaml
+name: viewer
+resources:
+  allowed:
+    - "**/read"
+    - "**/list"
+  denied:
+    - "admin/**"
+    - "**/delete"
+members:
+  - viewer1@example.com
+  - viewer2@example.com
+  - readonly@example.com
+```
+
+### Member Validation Rules
+
+`replbac` enforces strict member assignment validation:
+
+- **Unique Assignment**: Each team member can only be assigned to one role
+- **Email Format**: Members must be specified as valid email addresses
+- **No Duplicates**: A member cannot appear multiple times in the same role
+- **Automatic Cleanup**: Members removed from all roles are automatically deleted from the team (with confirmation)
+
+### Member Sync Operations
+
+When syncing roles with members:
+
+```bash
+# Sync roles and member assignments
+replbac sync
+
+# Preview member changes
+replbac sync --dry-run
+
+# View detailed member assignment changes
+replbac sync --diff
+```
+
+#### Member Assignment Process
+
+1. **Role Sync**: First, role definitions are synchronized
+2. **Member Assignment**: New members are assigned to their roles
+3. **Member Cleanup**: Members removed from all roles are identified
+4. **Confirmation**: User is prompted to confirm member deletions
+5. **Deletion**: Confirmed orphaned members are removed from the team
+
+#### Member Deletion Confirmation
+
+When members are removed from all roles, `replbac` will prompt for confirmation:
+
+```
+This operation will permanently delete 2 team member(s) from the API:
+  - former-employee@example.com
+  - contractor@example.com
+Do you want to continue? (y/N): 
+```
+
+Use `--force` to skip confirmation prompts in automated environments:
+
+```bash
+replbac sync --force
 ```
 
 ### Show Version Information

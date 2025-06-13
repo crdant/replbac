@@ -1,0 +1,13 @@
+# Example: Viewer role with team member assignments
+name: viewer
+resources:
+  allowed:
+    - "**/read"
+    - "**/list"
+  denied:
+    - "admin/**"
+    - "**/delete"
+members:
+  - viewer1@example.com
+  - viewer2@example.com
+  - readonly@example.com
