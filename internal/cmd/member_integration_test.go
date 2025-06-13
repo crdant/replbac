@@ -113,8 +113,8 @@ func TestSyncCommandWithMembers(t *testing.T) {
 			cmd.Flags().Bool("verbose", false, "verbose logging")
 			cmd.Flags().Bool("debug", false, "debug logging")
 
-			// Run sync command
-			err := RunSyncCommandWithClient(cmd, []string{tempDir}, mockClient, true, false, false) // dry-run
+			// Run sync command (not dry-run so we can verify member assignments)
+			err := RunSyncCommandWithClient(cmd, []string{tempDir}, mockClient, false, false, false)
 			if err != nil {
 				t.Fatalf("RunSyncCommandWithClient failed: %v", err)
 			}
