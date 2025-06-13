@@ -126,7 +126,8 @@ jobs:
         GOARCH: ${{ matrix.arch }}
       run: |
         mkdir -p dist
-        go build -o dist/$${{ matrix.os }}/${{ matrix.arch }}/replbac${{ matrix.os == 'windows' && '.exe' || '' }} ./cmd/replbac
+        go build -o dist/${{ matrix.os }}/${{ matrix.arch }}/replbac${{ matrix.os == 'windows' && '.exe' || '' }} ./cmd/replbac
+        ls dist/${{ matrix.os }}/${{ matrix.arch }}/replbac${{ matrix.os == 'windows' && '.exe' || '' }} 
 
     - name: Test binary
       if: matrix.os == 'linux' && matrix.arch == 'amd64'
