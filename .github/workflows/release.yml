@@ -137,21 +137,19 @@ jobs:
 
     - name: Create archives
       run:
-          bin_dir=dist/${{ matrix.os }}/${{ matrix.arch }}
-          workspace=$(pwd)
-          output_name=replbac-${{ steps.version.outputs.version }}-${{ matrix.os }}-${{ matrix.arch }}
+        bin_dir=dist/linux/amd64
+        workspace="$(pwd)"
+        output_name=replbac-v0.0.1-linux-amd64
 
-          if [[ ! "$os" == "windows" ]]; then
-            cd ${bin_dir}
-            tar -czf "dist/${output_name}.tar.gz" replbac
-            rm -rf ${bin_dir}
-            cd ${workspace} 
-          else
-            cd ${bin_dir}
-            zip "${output_name%.exe}.zip" replbac.exe
-            rm -rf ${bin_dir}
-            cd ${workspace} 
-          fi
+        cd "${bin_dir}" 
+        if [[ ! "$os" == "windows" ]]; then 
+          tar -czf "dist/${output_name}.tar.gz" replbac 
+        else 
+          zip "${output_name%.exe}.zip" replbac.exe 
+        fi
+
+        rm -rf "${bin_dir}"
+        cd "${workspace}"
 
     - name: Generate checksums and digests
       id: hash
