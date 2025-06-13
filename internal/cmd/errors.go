@@ -28,11 +28,11 @@ const (
 
 // ErrorContext provides additional context for errors
 type ErrorContext struct {
-	Category    ErrorCategory
-	Retryable   bool
+	Category     ErrorCategory
+	Retryable    bool
 	UserGuidance string
-	Recovery    string
-	ExitCode    int
+	Recovery     string
+	ExitCode     int
 }
 
 // CreateEnhancedSyncCommand creates a sync command with enhanced error handling
@@ -45,17 +45,17 @@ func CreateEnhancedSyncCommand(config models.Config) *cobra.Command {
 			// Get flag values
 			dryRun, _ := cmd.Flags().GetBool("dry-run")
 			diff, _ := cmd.Flags().GetBool("diff")
-			
+
 			// Use the unified sync command which now includes enhanced error handling
 			effectiveDryRun := dryRun || diff
 			return RunSyncCommand(cmd, args, config, effectiveDryRun, diff, false, false)
 		},
 	}
-	
+
 	// Add flags
 	cmd.Flags().Bool("dry-run", false, "preview changes without applying them")
 	cmd.Flags().String("roles-dir", "", "directory containing role YAML files")
-	
+
 	return cmd
 }
 
@@ -68,19 +68,18 @@ func CreateEnhancedSyncCommandWithClient(mockClient api.ClientInterface) *cobra.
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Get flag values
 			dryRun, _ := cmd.Flags().GetBool("dry-run")
-			
+
 			// Use the unified sync command with mock client
 			return RunSyncCommandWithClient(cmd, args, mockClient, dryRun, false, false)
 		},
 	}
-	
+
 	// Add flags
 	cmd.Flags().Bool("dry-run", false, "preview changes without applying them")
 	cmd.Flags().String("roles-dir", "", "directory containing role YAML files")
-	
+
 	return cmd
 }
-
 
 // ValidateConfiguration validates the configuration with detailed error messages
 func ValidateConfiguration(config models.Config) error {
@@ -132,7 +131,6 @@ func ValidateDirectoryAccess(path string) error {
 
 	return nil
 }
-
 
 // Error type definitions
 
@@ -225,14 +223,14 @@ func HandleSyncError(cmd *cobra.Command, err error) error {
 		cmd.Printf("Help: %s\n", syncErr.Guidance)
 		return fmt.Errorf("sync operation failed: %s", syncErr.Message)
 	}
-	
+
 	// Handle network errors
 	if IsNetworkError(err) {
 		cmd.Printf("Error: Connection failed\n")
 		cmd.Printf("Help: Check your network connection and API endpoint configuration\n")
 		return fmt.Errorf("failed to get remote roles: API connection failed")
 	}
-	
+
 	return err
 }
 
@@ -242,7 +240,7 @@ func IsRetryableError(err error) bool {
 	if netErr, ok := err.(*NetworkError); ok {
 		return netErr.Retryable
 	}
-	
+
 	// Check for common retryable error patterns
 	errStr := strings.ToLower(err.Error())
 	retryablePatterns := []string{
@@ -252,13 +250,13 @@ func IsRetryableError(err error) bool {
 		"temporary failure",
 		"service unavailable",
 	}
-	
+
 	for _, pattern := range retryablePatterns {
 		if strings.Contains(errStr, pattern) {
 			return true
 		}
 	}
-	
+
 	return false
 }
 
@@ -286,12 +284,12 @@ func EnhanceErrorMessage(err error) string {
 
 	errStr := err.Error()
 	enhanced := fmt.Sprintf("Error: %s", errStr)
-	
+
 	// Check for specific error patterns and provide targeted guidance
 	lowerErr := strings.ToLower(errStr)
-	
+
 	var guidance string
-	
+
 	if strings.Contains(lowerErr, "connection refused") || strings.Contains(lowerErr, "network") {
 		guidance = "Check your network connection and API endpoint configuration"
 	} else if strings.Contains(lowerErr, "api token") || strings.Contains(lowerErr, "configuration") {
@@ -304,11 +302,11 @@ func EnhanceErrorMessage(err error) string {
 		// Try to get recovery from structured error types
 		guidance = GetErrorRecovery(err)
 	}
-	
+
 	if guidance != "" {
 		enhanced += fmt.Sprintf("\nHelp: %s", guidance)
 	}
-	
+
 	return enhanced
 }
 
@@ -316,12 +314,12 @@ func IsNetworkError(err error) bool {
 	if err == nil {
 		return false
 	}
-	
+
 	// Check for network error types
 	if _, ok := err.(*net.OpError); ok {
 		return true
 	}
-	
+
 	// Check for common network error patterns
 	errStr := strings.ToLower(err.Error())
 	networkPatterns := []string{
@@ -332,13 +330,13 @@ func IsNetworkError(err error) bool {
 		"dns",
 		"invalid-endpoint",
 	}
-	
+
 	for _, pattern := range networkPatterns {
 		if strings.Contains(errStr, pattern) {
 			return true
 		}
 	}
-	
+
 	return false
 }
 
@@ -354,7 +352,7 @@ func CreateScenarioError(scenario string) error {
 		}
 	case "rate_limit":
 		return &NetworkError{
-			Operation: "API request", 
+			Operation: "API request",
 			Message:   "rate limit exceeded",
 			Guidance:  "Wait a moment and try again",
 			Retryable: true,

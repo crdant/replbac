@@ -1,0 +1,112 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    outputs:
+      digests: ${{ steps.hash.outputs.digests }}
+    
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+
+    - name: Cache Go modules
+      uses: actions/cache@v3
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+
+    - name: Download dependencies
+      run: go mod download
+
+    - name: Run tests
+      run: go test -race -coverprofile=coverage.txt -covermode=atomic ./...
+
+    - name: Build binaries
+      run: |
+        mkdir -p dist
+        
+        # Build for multiple platforms
+        platforms=(
+          "linux/amd64"
+          "linux/arm64"
+          "darwin/amd64"
+          "darwin/arm64"
+          "windows/amd64"
+        )
+        
+        for platform in "${platforms[@]}"; do
+          os=$(echo $platform | cut -d'/' -f1)
+          arch=$(echo $platform | cut -d'/' -f2)
+          output_name="replbac-${os}-${arch}"
+          
+          if [ "$os" = "windows" ]; then
+            output_name="${output_name}.exe"
+          fi
+          
+          echo "Building for $os/$arch..."
+          GOOS=$os GOARCH=$arch go build -ldflags="-s -w -X main.version=${GITHUB_REF#refs/tags/}" -o "dist/${output_name}" ./cmd/replbac
+          
+          # Create archive for non-Windows platforms
+          if [ "$os" != "windows" ]; then
+            cd dist
+            tar -czf "${output_name}.tar.gz" "${output_name}"
+            rm "${output_name}"
+            cd ..
+          else
+            cd dist
+            zip "${output_name%.exe}.zip" "${output_name}"
+            rm "${output_name}"
+            cd ..
+          fi
+        done
+
+    - name: Generate checksums and digests
+      id: hash
+      run: |
+        cd dist
+        sha256sum * > checksums.txt
+        
+        # Generate SLSA digests
+        echo "digests=$(sha256sum * | base64 -w0)" >> "$GITHUB_OUTPUT"
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          dist/*
+        generate_release_notes: true
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # SLSA Level 3 provenance generation
+  provenance:
+    needs: [release]
+    permissions:
+      actions: read
+      id-token: write
+      contents: write
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v1.9.0
+    with:
+      base64-subjects: "${{ needs.release.outputs.digests }}"
+      upload-assets: true

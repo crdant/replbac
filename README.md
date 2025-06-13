@@ -1,5 +1,11 @@
 # replbac - Replicated RBAC Synchronization Tool 🔒
 
+[![CI](https://github.com/crdant/replbac/workflows/CI/badge.svg)](https://github.com/crdant/replbac/actions/workflows/ci.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/crdant/replbac)](https://goreportcard.com/report/github.com/crdant/replbac)
+[![codecov](https://codecov.io/gh/crdant/replbac/branch/main/graph/badge.svg)](https://codecov.io/gh/crdant/replbac)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Release](https://img.shields.io/github/release/crdant/replbac.svg)](https://github.com/crdant/replbac/releases/latest)
+
 `replbac` is a command-line tool for synchronizing Role-Based Access Control (RBAC) configurations between local YAML files and the Replicated Vendor Portal API. Manage your Replicated team roles as code with version control and automated deployment.
 
 ## 🌟 Features

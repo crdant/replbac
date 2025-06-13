@@ -78,7 +78,7 @@ resources:
 			},
 		},
 		{
-			name:  "sync with updates and deletes",
+			name: "sync with updates and deletes",
 			files: map[string]string{
 				"admin.yaml": `name: admin
 resources:
@@ -159,7 +159,7 @@ resources:
 			},
 			mockAPIRoles: []models.Role{},
 			args:         []string{"special"},
-			expectError: false,
+			expectError:  false,
 			expectOutput: []string{
 				"Synchronizing roles from directory: special",
 				"create 1 role(s)",
@@ -315,7 +315,6 @@ resources:
 	}
 }
 
-
 // TestSyncCommandConfiguration tests configuration handling
 func TestSyncCommandConfiguration(t *testing.T) {
 	tests := []struct {
@@ -330,7 +329,7 @@ func TestSyncCommandConfiguration(t *testing.T) {
 			name: "valid configuration",
 			config: map[string]string{
 				"api_endpoint": "https://api.replicated.com",
-				"api_token":   "test-token",
+				"api_token":    "test-token",
 			},
 			expectError: false,
 		},
@@ -631,12 +630,11 @@ func NewSyncCommand(mockClient *MockClient) *cobra.Command {
 			return RunSyncCommandWithClient(cmd, args, mockClient, dryRun, delete, false)
 		},
 	}
-	
+
 	// Add flags
 	cmd.Flags().Bool("dry-run", false, "preview changes without applying them")
 	cmd.Flags().String("roles-dir", "", "directory containing role YAML files")
 	cmd.Flags().Bool("delete", false, "delete remote roles not present in local files")
-	
+
 	return cmd
 }
-

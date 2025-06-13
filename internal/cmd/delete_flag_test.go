@@ -15,15 +15,15 @@ import (
 // TestDeleteFlagBehavior tests the --delete flag controls deletion behavior
 func TestDeleteFlagBehavior(t *testing.T) {
 	tests := []struct {
-		name               string
-		args               []string
-		flags              map[string]string
-		localFiles         map[string]string
-		remoteRoles        []models.Role
-		expectError        bool
-		expectOutput       []string
-		expectNotInOutput  []string
-		validateAPICalls   func(t *testing.T, calls *MockAPICalls)
+		name              string
+		args              []string
+		flags             map[string]string
+		localFiles        map[string]string
+		remoteRoles       []models.Role
+		expectError       bool
+		expectOutput      []string
+		expectNotInOutput []string
+		validateAPICalls  func(t *testing.T, calls *MockAPICalls)
 	}{
 		{
 			name: "sync without delete flag - skips deletions",
@@ -149,8 +149,8 @@ resources:
 			},
 		},
 		{
-			name: "sync help shows delete flag",
-			args: []string{"--help"},
+			name:        "sync help shows delete flag",
+			args:        []string{"--help"},
 			expectError: false,
 			expectOutput: []string{
 				"--delete",
@@ -268,15 +268,15 @@ Use --dry-run to preview changes without applying them.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			dryRun, _ := cmd.Flags().GetBool("dry-run")
 			delete, _ := cmd.Flags().GetBool("delete")
-			
+
 			return RunSyncCommandWithDeleteControl(cmd, args, mockClient, dryRun, delete)
 		},
 	}
-	
+
 	cmd.Flags().Bool("dry-run", false, "preview changes without applying them")
 	cmd.Flags().Bool("delete", false, "delete remote roles not present in local files (default: false)")
 	cmd.Flags().Bool("verbose", false, "enable verbose logging")
-	
+
 	return cmd
 }
 

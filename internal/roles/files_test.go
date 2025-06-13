@@ -179,7 +179,7 @@ resources:
 			// Create temporary file
 			tmpDir := t.TempDir()
 			filePath := filepath.Join(tmpDir, tt.fileName)
-			
+
 			if err := os.WriteFile(filePath, []byte(tt.fileContent), 0644); err != nil {
 				t.Fatalf("Failed to create test file: %v", err)
 			}
@@ -212,7 +212,7 @@ resources:
 func TestFindRoleFiles(t *testing.T) {
 	// Create test directory structure
 	tmpDir := t.TempDir()
-	
+
 	// Create role files
 	roleFiles := map[string]string{
 		"admin.yaml": `name: admin
@@ -228,7 +228,7 @@ resources:
 resources:
   allowed: ["data:read"]`,
 		"not-a-role.txt": "just text",
-		"config.json": `{"not": "role"}`,
+		"config.json":    `{"not": "role"}`,
 	}
 
 	for relPath, content := range roleFiles {
@@ -305,7 +305,7 @@ resources:
 func TestLoadRolesFromDirectory(t *testing.T) {
 	// Create test directory structure
 	tmpDir := t.TempDir()
-	
+
 	roleFiles := map[string]string{
 		"admin.yaml": `name: admin
 resources:
@@ -509,11 +509,11 @@ func TestValidateRoleFile(t *testing.T) {
 }
 
 func containsString(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || 
-		(len(s) > len(substr) && 
-			(s[:len(substr)] == substr || 
-			 s[len(s)-len(substr):] == substr ||
-			 containsSubstring(s, substr))))
+	return len(s) >= len(substr) && (s == substr ||
+		(len(s) > len(substr) &&
+			(s[:len(substr)] == substr ||
+				s[len(s)-len(substr):] == substr ||
+				containsSubstring(s, substr))))
 }
 
 func containsSubstring(s, substr string) bool {
@@ -530,19 +530,19 @@ func rolesEqual(a, b models.Role) bool {
 	if a.ID != b.ID || a.Name != b.Name {
 		return false
 	}
-	
+
 	if !slicesEqual(a.Resources.Allowed, b.Resources.Allowed) {
 		return false
 	}
-	
+
 	if !slicesEqual(a.Resources.Denied, b.Resources.Denied) {
 		return false
 	}
-	
+
 	if !slicesEqual(a.Members, b.Members) {
 		return false
 	}
-	
+
 	return true
 }
 
@@ -564,7 +564,7 @@ func slicesEqual(a, b []string) bool {
 
 func TestWriteRoleFile_WithMembers(t *testing.T) {
 	tmpDir := t.TempDir()
-	
+
 	tests := []struct {
 		name     string
 		role     models.Role
@@ -609,7 +609,7 @@ func TestWriteRoleFile_WithMembers(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			filePath := filepath.Join(tmpDir, tt.fileName)
-			
+
 			// Write the role file
 			err := WriteRoleFile(tt.role, filePath)
 			if err != nil {

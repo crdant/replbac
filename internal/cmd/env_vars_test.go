@@ -36,7 +36,7 @@ func TestEnvironmentVariableDocumentation(t *testing.T) {
 			},
 		},
 		{
-			name:    "pull command help mentions environment variables", 
+			name:    "pull command help mentions environment variables",
 			command: []string{"pull", "--help"},
 			expectInHelp: []string{
 				"Environment Variables:",
@@ -57,11 +57,11 @@ func TestEnvironmentVariableDocumentation(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create a fresh root command to avoid state pollution
 			cmd := createTestRootCommand()
-			
+
 			// Capture help output
 			cmd.SetArgs(tt.command)
 			output, err := executeCommandToString(cmd)
-			
+
 			// Help commands should not return an error (they exit with status 0)
 			if err != nil && !strings.Contains(err.Error(), "help requested") {
 				t.Errorf("Unexpected error from help command: %v", err)
@@ -80,8 +80,8 @@ func TestEnvironmentVariableDocumentation(t *testing.T) {
 // TestEnvironmentVariableReference tests that flag descriptions reference environment variables
 func TestEnvironmentVariableReference(t *testing.T) {
 	tests := []struct {
-		name        string
-		flagName    string
+		name                string
+		flagName            string
 		expectInDescription []string
 	}{
 		{
@@ -119,7 +119,7 @@ func TestEnvironmentVariableReference(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create a fresh root command to get flag descriptions
 			cmd := createTestRootCommand()
-			
+
 			// Find the flag
 			flag := cmd.PersistentFlags().Lookup(tt.flagName)
 			if flag == nil {
@@ -167,13 +167,13 @@ Environment Variables:
   Environment variables have lower precedence than CLI flags but higher than config files.
   REPLICATED_API_TOKEN is checked first for compatibility with the replicated CLI.`,
 	}
-	
+
 	// Add flags with environment variable documentation
 	cmd.PersistentFlags().String("config", "", "config file path (env: REPLBAC_CONFIG)")
 	cmd.PersistentFlags().String("api-token", "", "Replicated API token (env: REPLICATED_API_TOKEN, REPLBAC_API_TOKEN)")
 	cmd.PersistentFlags().Bool("confirm", false, "automatically confirm destructive operations (env: REPLBAC_CONFIRM)")
 	cmd.PersistentFlags().String("log-level", "", "log level: debug, info, warn, error (env: REPLBAC_LOG_LEVEL)")
-	
+
 	// Add subcommands with environment variable sections
 	syncCmd := &cobra.Command{
 		Use:   "sync [directory]",
@@ -185,9 +185,9 @@ Environment Variables:
   This command supports all global environment variables. 
   See 'replbac --help' for full environment variable documentation.`,
 	}
-	
+
 	pullCmd := &cobra.Command{
-		Use:   "pull [directory]", 
+		Use:   "pull [directory]",
 		Short: "Pull remote roles to local YAML files",
 		Long: `Pull downloads role definitions from the Replicated API and saves them
 as local YAML files.
@@ -196,7 +196,7 @@ Environment Variables:
   This command supports all global environment variables.
   See 'replbac --help' for full environment variable documentation.`,
 	}
-	
+
 	versionCmd := &cobra.Command{
 		Use:   "version",
 		Short: "Show version information",
@@ -205,9 +205,9 @@ Environment Variables:
 Environment Variables:
   See 'replbac --help' for full environment variable documentation.`,
 	}
-	
+
 	cmd.AddCommand(syncCmd, pullCmd, versionCmd)
-	
+
 	return cmd
 }
 
@@ -216,7 +216,7 @@ func executeCommandToString(cmd *cobra.Command) (string, error) {
 	buf := &strings.Builder{}
 	cmd.SetOut(buf)
 	cmd.SetErr(buf)
-	
+
 	err := cmd.Execute()
 	return buf.String(), err
 }

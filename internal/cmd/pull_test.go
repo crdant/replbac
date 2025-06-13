@@ -15,15 +15,15 @@ import (
 // TestPullCommand tests the complete pull command workflow with new flags
 func TestPullCommand(t *testing.T) {
 	tests := []struct {
-		name                string
-		args                []string
-		flags               map[string]string
-		mockAPIRoles        []models.Role
-		existingFiles       map[string]string
-		expectError         bool
-		expectOutput        []string
-		expectFiles         map[string]string
-		expectNoFiles       []string
+		name                 string
+		args                 []string
+		flags                map[string]string
+		mockAPIRoles         []models.Role
+		existingFiles        map[string]string
+		expectError          bool
+		expectOutput         []string
+		expectFiles          map[string]string
+		expectNoFiles        []string
 		validateAPICallsFunc func(t *testing.T, calls *MockAPICalls)
 	}{
 		{
@@ -192,9 +192,9 @@ func TestPullCommand(t *testing.T) {
 			},
 		},
 		{
-			name:  "pull empty API - no files created",
-			args:  []string{},
-			flags: map[string]string{},
+			name:         "pull empty API - no files created",
+			args:         []string{},
+			flags:        map[string]string{},
 			mockAPIRoles: []models.Role{},
 			expectError:  false,
 			expectOutput: []string{
@@ -203,10 +203,10 @@ func TestPullCommand(t *testing.T) {
 			},
 		},
 		{
-			name: "pull with API error",
-			args: []string{},
+			name:         "pull with API error",
+			args:         []string{},
 			mockAPIRoles: nil, // This will trigger an error in the mock
-			expectError: true,
+			expectError:  true,
 			expectOutput: []string{
 				"Failed to fetch roles from API",
 			},
@@ -333,25 +333,25 @@ func NewPullCommand(mockClient *MockClient) *cobra.Command {
 			dryRun, _ := cmd.Flags().GetBool("dry-run")
 			diff, _ := cmd.Flags().GetBool("diff")
 			force, _ := cmd.Flags().GetBool("force")
-			
+
 			// Determine target directory
 			targetDir := "."
 			if len(args) > 0 {
 				targetDir = args[0]
 			}
-			
+
 			// If diff is enabled, enable dry-run too
 			effectiveDryRun := dryRun || diff
-			
+
 			return RunPullCommandWithClient(cmd, targetDir, effectiveDryRun, diff, force, mockClient)
 		},
 	}
-	
+
 	cmd.Flags().Bool("dry-run", false, "preview changes without applying them")
 	cmd.Flags().Bool("diff", false, "preview changes with detailed diffs (implies --dry-run)")
 	cmd.Flags().Bool("force", false, "overwrite existing files")
 	cmd.Flags().Bool("verbose", false, "enable verbose logging")
-	
+
 	return cmd
 }
 

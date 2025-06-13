@@ -16,12 +16,12 @@ import (
 )
 
 var (
-	syncDryRun   bool
-	syncDiff     bool
-	syncDelete   bool
-	syncForce    bool
-	verbose      bool
-	debug        bool
+	syncDryRun bool
+	syncDiff   bool
+	syncDelete bool
+	syncForce  bool
+	verbose    bool
+	debug      bool
 )
 
 // syncCmd represents the sync command
@@ -59,7 +59,7 @@ Environment Variables:
 
 func init() {
 	rootCmd.AddCommand(syncCmd)
-	
+
 	// Sync-specific flags
 	syncCmd.Flags().BoolVar(&syncDryRun, "dry-run", false, "preview changes without applying them")
 	syncCmd.Flags().BoolVar(&syncDiff, "diff", false, "preview changes with detailed diffs (implies --dry-run)")
@@ -78,7 +78,7 @@ func RunSyncCommand(cmd *cobra.Command, args []string, config models.Config, dry
 	if cmd.ErrOrStderr() == os.Stdout {
 		cmd.SetErr(os.Stderr)
 	}
-	
+
 	// Create logger that outputs to stderr
 	verbose := false
 	debug := false
@@ -88,14 +88,14 @@ func RunSyncCommand(cmd *cobra.Command, args []string, config models.Config, dry
 	if cmd.Flags().Lookup("debug") != nil {
 		debug, _ = cmd.Flags().GetBool("debug")
 	}
-	
+
 	var logger *logging.Logger
 	if debug {
 		logger = logging.NewDebugLogger(cmd.ErrOrStderr())
 	} else {
 		logger = logging.NewLogger(cmd.ErrOrStderr(), verbose)
 	}
-	
+
 	// Pre-flight validation with logging
 	logger.Debug("validating configuration")
 	if err := ValidateConfiguration(config); err != nil {
@@ -123,7 +123,7 @@ func RunSyncCommand(cmd *cobra.Command, args []string, config models.Config, dry
 		logger.Error("failed to create API client: %v", err)
 		return HandleConfigurationError(cmd, fmt.Errorf("failed to create API client: %w", err))
 	}
-	
+
 	// Use the enhanced logging version
 	return RunSyncCommandWithLogging(cmd, args, client, dryRun, diff, delete, force, logger, config)
 }
@@ -138,7 +138,7 @@ func RunSyncCommandWithLogging(cmd *cobra.Command, args []string, client api.Cli
 
 	cmd.Printf("Synchronizing roles from directory: %s\n", targetDir)
 	logger.Debug("sync operation starting: target directory: %s, dry-run: %v", targetDir, dryRun)
-	
+
 	if dryRun {
 		cmd.Println("DRY RUN: No changes will be applied")
 		logger.Debug("running in dry-run mode")
@@ -146,7 +146,7 @@ func RunSyncCommandWithLogging(cmd *cobra.Command, args []string, client api.Cli
 
 	// Load local roles
 	logger.Debug("loading roles from directory: %s", targetDir)
-	
+
 	loadResult, err := roles.LoadRolesFromDirectoryWithDetails(targetDir)
 	if err != nil {
 		logger.Error("failed to load roles from directory: %v", err)
@@ -171,7 +171,7 @@ func RunSyncCommandWithLogging(cmd *cobra.Command, args []string, client api.Cli
 		cmd.Printf("Warning: Skipped %s (%s)\n", skipped.Path, skipped.Reason)
 		logger.Debug("skipped file: %s (reason: %s)", skipped.Path, skipped.Reason)
 	}
-	
+
 	if len(loadResult.SkippedFiles) > 0 {
 		cmd.Printf("Help: Check your YAML files for proper formatting and structure\n")
 	}
@@ -247,13 +247,13 @@ func RunSyncCommandWithLogging(cmd *cobra.Command, args []string, client api.Cli
 	if len(plan.Deletes) > 0 && !dryRun && !config.Confirm && !force {
 		cmd.Printf("\nThis operation will permanently delete %d role(s) from the API.\n", len(plan.Deletes))
 		cmd.Print("Do you want to continue? (y/N): ")
-		
+
 		reader := bufio.NewReader(os.Stdin)
 		response, err := reader.ReadString('\n')
 		if err != nil {
 			return fmt.Errorf("failed to read confirmation: %w", err)
 		}
-		
+
 		response = strings.ToLower(strings.TrimSpace(response))
 		if response != "y" && response != "yes" {
 			cmd.Println("Operation cancelled by user")
@@ -265,11 +265,11 @@ func RunSyncCommandWithLogging(cmd *cobra.Command, args []string, client api.Cli
 
 	// Execute sync plan with timing
 	var result sync.ExecutionResult
-	
+
 	err = logger.TimedOperation("sync execution", func() error {
 		// Check if any roles have members to determine which executor to use
 		hasMembers := rolesHaveMembers(localRoles)
-		
+
 		if hasMembers {
 			logger.Debug("roles contain members - using ExecutorWithMembers")
 			executor := sync.NewExecutorWithMembers(client.(sync.APIClientWithMembers), logger)
@@ -328,7 +328,7 @@ func RunSyncCommandWithClient(cmd *cobra.Command, args []string, client api.Clie
 	if cmd.ErrOrStderr() == os.Stdout {
 		cmd.SetErr(os.Stderr)
 	}
-	
+
 	// Create a logger that outputs to stderr
 	verbose := false
 	debug := false
@@ -338,7 +338,7 @@ func RunSyncCommandWithClient(cmd *cobra.Command, args []string, client api.Clie
 	if cmd.Flags().Lookup("debug") != nil {
 		debug, _ = cmd.Flags().GetBool("debug")
 	}
-	
+
 	var logger *logging.Logger
 	if debug {
 		logger = logging.NewDebugLogger(cmd.ErrOrStderr())
@@ -350,13 +350,13 @@ func RunSyncCommandWithClient(cmd *cobra.Command, args []string, client api.Clie
 	if len(args) > 0 {
 		targetDir = args[0]
 	}
-	
+
 	cmd.Printf("Synchronizing roles from directory: %s\n", targetDir)
-	
+
 	if dryRun {
 		cmd.Println("DRY RUN: No changes will be applied")
 	}
-	
+
 	// Load local roles from directory with detailed feedback
 	loadResult, err := roles.LoadRolesFromDirectoryWithDetails(targetDir)
 	if err != nil {
@@ -371,44 +371,44 @@ func RunSyncCommandWithClient(cmd *cobra.Command, args []string, client api.Clie
 		}
 		return fmt.Errorf("failed to load local roles: %w", err)
 	}
-	
+
 	// Display warnings for skipped files
 	for _, skipped := range loadResult.SkippedFiles {
 		cmd.Printf("Warning: Skipped %s (%s)\n", skipped.Path, skipped.Reason)
 	}
-	
+
 	// Provide user guidance if files were skipped
 	if len(loadResult.SkippedFiles) > 0 {
 		cmd.Printf("Help: Check your YAML files for proper formatting and structure\n")
 	}
-	
+
 	localRoles := loadResult.Roles
-	
+
 	// Get remote roles from API
 	remoteRoles, err := client.GetRoles()
 	if err != nil {
 		return HandleSyncError(cmd, fmt.Errorf("failed to get remote roles: %w", err))
 	}
-	
+
 	// Compare roles and generate sync plan
 	plan, err := sync.CompareRoles(localRoles, remoteRoles)
 	if err != nil {
 		return fmt.Errorf("failed to compare roles: %w", err)
 	}
-	
+
 	// Remove deletions from plan if delete flag is not set
 	if !delete && len(plan.Deletes) > 0 {
 		plan.Deletes = []string{} // Clear deletions
 	}
-	
+
 	// Display plan summary
 	if !plan.HasChanges() {
 		cmd.Println("No changes needed")
 		return nil
 	}
-	
+
 	cmd.Printf("Sync plan: %s\n", plan.Summary())
-	
+
 	// Display detailed plan
 	if len(plan.Creates) > 0 {
 		cmd.Printf("Will create %d role(s):\n", len(plan.Creates))
@@ -416,27 +416,27 @@ func RunSyncCommandWithClient(cmd *cobra.Command, args []string, client api.Clie
 			cmd.Printf("  - %s\n", role.Name)
 		}
 	}
-	
+
 	if len(plan.Updates) > 0 {
 		cmd.Printf("Will update %d role(s):\n", len(plan.Updates))
 		for _, update := range plan.Updates {
 			cmd.Printf("  - %s\n", update.Name)
 		}
 	}
-	
+
 	if len(plan.Deletes) > 0 {
 		cmd.Printf("Will delete %d role(s):\n", len(plan.Deletes))
 		for _, roleName := range plan.Deletes {
 			cmd.Printf("  - %s\n", roleName)
 		}
 	}
-	
+
 	// Execute sync plan
 	var result sync.ExecutionResult
-	
+
 	// Check if any roles have members to determine which executor to use
 	hasMembers := rolesHaveMembers(localRoles)
-	
+
 	if hasMembers {
 		logger.Debug("roles contain members - using ExecutorWithMembers")
 		executor := sync.NewExecutorWithMembers(client.(sync.APIClientWithMembers), logger)
@@ -454,7 +454,7 @@ func RunSyncCommandWithClient(cmd *cobra.Command, args []string, client api.Clie
 			result = executor.ExecutePlan(plan)
 		}
 	}
-	
+
 	// Handle execution result
 	if result.Error != nil {
 		syncErr := &SyncError{
@@ -465,10 +465,10 @@ func RunSyncCommandWithClient(cmd *cobra.Command, args []string, client api.Clie
 		}
 		return HandleSyncError(cmd, syncErr)
 	}
-	
+
 	// Display execution summary
 	cmd.Printf("\nSync completed: %s\n", result.Summary())
-	
+
 	return nil
 }
 

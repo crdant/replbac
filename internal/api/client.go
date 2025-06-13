@@ -62,7 +62,7 @@ func NewClientWithRetry(baseURL, apiToken string, logger *logging.Logger, maxRet
 	}
 
 	logger.Debug("creating API client for endpoint: %s", baseURL)
-	
+
 	return &Client{
 		baseURL:  strings.TrimSuffix(baseURL, "/"),
 		apiToken: apiToken,
@@ -77,7 +77,7 @@ func NewClientWithRetry(baseURL, apiToken string, logger *logging.Logger, maxRet
 // executeWithRetry performs HTTP requests with exponential backoff retry logic
 func (c *Client) executeWithRetry(ctx context.Context, req *http.Request) (*http.Response, error) {
 	var lastErr error
-	
+
 	for attempt := 0; attempt <= c.maxRetries; attempt++ {
 		// Check if context was cancelled
 		select {
@@ -85,29 +85,29 @@ func (c *Client) executeWithRetry(ctx context.Context, req *http.Request) (*http
 			return nil, ctx.Err()
 		default:
 		}
-		
+
 		// Apply exponential backoff delay (but not on first attempt)
 		if attempt > 0 {
 			backoffDuration := time.Duration(math.Pow(2, float64(attempt-1))) * time.Second
 			c.logger.Debug("retrying request after %v delay (attempt %d/%d)", backoffDuration, attempt+1, c.maxRetries+1)
-			
+
 			select {
 			case <-time.After(backoffDuration):
 			case <-ctx.Done():
 				return nil, ctx.Err()
 			}
 		}
-		
+
 		// Clone request for retry (can't reuse request body)
 		reqClone := req.Clone(ctx)
-		
+
 		resp, err := c.httpClient.Do(reqClone)
 		if err != nil {
 			lastErr = fmt.Errorf("HTTP request failed: %w", err)
 			c.logger.Warn("request attempt %d failed: %v", attempt+1, err)
 			continue
 		}
-		
+
 		// Check if we should retry based on status code
 		if resp.StatusCode >= 500 && resp.StatusCode < 600 {
 			resp.Body.Close()
@@ -115,11 +115,11 @@ func (c *Client) executeWithRetry(ctx context.Context, req *http.Request) (*http
 			c.logger.Warn("request attempt %d failed with server error: HTTP %d", attempt+1, resp.StatusCode)
 			continue
 		}
-		
+
 		// Success or client error (don't retry client errors)
 		return resp, nil
 	}
-	
+
 	return nil, fmt.Errorf("request failed after %d attempts: %w", c.maxRetries+1, lastErr)
 }
 
@@ -236,13 +236,13 @@ func (c *Client) GetRole(roleName string) (models.Role, error) {
 	if err != nil {
 		return models.Role{}, fmt.Errorf("failed to fetch policies: %w", err)
 	}
-	
+
 	for _, policy := range policies {
 		if policy.Name == roleName {
 			return policy.ToRole()
 		}
 	}
-	
+
 	return models.Role{}, fmt.Errorf("role not found: %s", roleName)
 }
 
@@ -309,7 +309,7 @@ func (c *Client) UpdateRole(role models.Role) error {
 		c.logger.Error("UpdateRole failed for %s: missing role ID", role.Name)
 		return fmt.Errorf("role ID is required for update operation")
 	}
-	
+
 	url := c.baseURL + "/vendor/v3/policy/" + role.ID
 	c.logger.Debug("updating role at endpoint: %s", url)
 
@@ -371,7 +371,7 @@ func (c *Client) DeleteRole(roleName string) error {
 		c.logger.Error("DeleteRole failed for %s during policy lookup: %v", roleName, err)
 		return fmt.Errorf("failed to fetch policies: %w", err)
 	}
-	
+
 	var policyID string
 	for _, policy := range policies {
 		if policy.Name == roleName {
@@ -379,12 +379,12 @@ func (c *Client) DeleteRole(roleName string) error {
 			break
 		}
 	}
-	
+
 	if policyID == "" {
 		c.logger.Warn("role not found for deletion: %s", roleName)
 		return fmt.Errorf("role not found: %s", roleName)
 	}
-	
+
 	c.logger.Debug("found policy ID %s for role %s", policyID, roleName)
 	url := c.baseURL + "/vendor/v3/policy/" + policyID
 	c.logger.Debug("deleting role at endpoint: %s", url)
@@ -473,7 +473,7 @@ func (c *Client) GetRolesWithContext(ctx context.Context) ([]models.Role, error)
 // GetRoleWithContext fetches a specific role by name from the API with context support
 func (c *Client) GetRoleWithContext(ctx context.Context, roleName string) (models.Role, error) {
 	c.logger.Info("fetching role '%s' from API", roleName)
-	
+
 	roles, err := c.GetRolesWithContext(ctx)
 	if err != nil {
 		return models.Role{}, err
@@ -686,7 +686,7 @@ func (c *Client) GetTeamMembersWithContext(ctx context.Context) ([]models.TeamMe
 	}
 
 	c.logger.Debug("received response body of %d bytes", len(body))
-	
+
 	// Parse the response - /v1/team/members returns an array directly
 	var members []models.TeamMember
 	if err := json.Unmarshal(body, &members); err != nil {

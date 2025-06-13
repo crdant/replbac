@@ -1,4 +1,4 @@
-.PHONY: build test clean lint install man install-man help
+.PHONY: build test clean lint fmt ci coverage install man install-man help
 
 # Build variables
 BINARY_NAME=replbac
@@ -28,10 +28,19 @@ clean: ## Clean build artifacts
 	@rm -rf $(BUILD_DIR)
 	@go clean
 
+fmt: ## Format code
+	@echo "Formatting code..."
+	@go fmt ./...
+	@if command -v goimports >/dev/null 2>&1; then \
+		echo "Running goimports..."; \
+		goimports -w .; \
+	else \
+		echo "goimports not found, skipping import organization"; \
+	fi
+
 lint: ## Run linter
 	@echo "Running linter..."
 	@go vet ./...
-	@go fmt ./...
 
 install: build ## Install binary locally
 	@echo "Installing $(BINARY_NAME)..."
@@ -48,5 +57,14 @@ install-man: man ## Install man page to system
 	@sudo mkdir -p /usr/local/share/man/man1
 	@sudo cp $(MAN_FILE) /usr/local/share/man/man1/
 	@echo "Man page installed to /usr/local/share/man/man1/"
+
+coverage: ## Run tests with coverage
+	@echo "Running tests with coverage..."
+	@go test -race -coverprofile=coverage.txt -covermode=atomic ./...
+	@go tool cover -html=coverage.txt -o coverage.html
+	@echo "Coverage report generated: coverage.html"
+
+ci: fmt lint test ## Run all CI checks locally
+	@echo "All CI checks passed!"
 
 .DEFAULT_GOAL := help

@@ -49,7 +49,7 @@ func TestEnhancedErrorHandling(t *testing.T) {
 				if err != nil {
 					t.Fatalf("Failed to create temp dir: %v", err)
 				}
-				
+
 				// Create invalid YAML file
 				invalidYAML := `name: test
 resources:
@@ -59,7 +59,7 @@ resources:
 				if err != nil {
 					t.Fatalf("Failed to write invalid YAML: %v", err)
 				}
-				
+
 				return tempDir, func() { os.RemoveAll(tempDir) }
 			},
 			config: models.Config{
@@ -76,7 +76,7 @@ resources:
 				if err != nil {
 					t.Fatalf("Failed to create temp dir: %v", err)
 				}
-				
+
 				// Create valid role file
 				validYAML := `name: test
 resources:
@@ -86,7 +86,7 @@ resources:
 				if err != nil {
 					t.Fatalf("Failed to write valid YAML: %v", err)
 				}
-				
+
 				return tempDir, func() { os.RemoveAll(tempDir) }
 			},
 			config: models.Config{
@@ -119,7 +119,7 @@ resources:
 				if err != nil {
 					t.Fatalf("Failed to create temp dir: %v", err)
 				}
-				
+
 				// Create role that will trigger API error during sync
 				problematicYAML := `name: problematic-role
 resources:
@@ -129,7 +129,7 @@ resources:
 				if err != nil {
 					t.Fatalf("Failed to write problematic YAML: %v", err)
 				}
-				
+
 				return tempDir, func() { os.RemoveAll(tempDir) }
 			},
 			config: models.Config{
@@ -148,14 +148,14 @@ resources:
 				if err != nil {
 					t.Fatalf("Failed to create temp dir: %v", err)
 				}
-				
+
 				// Create directory with restricted permissions
 				restrictedDir := filepath.Join(tempDir, "restricted")
 				err = os.Mkdir(restrictedDir, 0000) // No permissions
 				if err != nil {
 					t.Fatalf("Failed to create restricted dir: %v", err)
 				}
-				
+
 				return restrictedDir, func() {
 					os.Chmod(restrictedDir, 0755) // Restore permissions for cleanup
 					os.RemoveAll(tempDir)
@@ -205,7 +205,7 @@ resources:
 					t.Fatalf("Failed to get current dir: %v", err)
 				}
 				defer os.Chdir(oldDir)
-				
+
 				// Use testDir as argument instead of changing directory
 				tt.args = []string{testDir}
 			}
@@ -298,7 +298,7 @@ func TestErrorRecovery(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Test error categorization
 			err := CreateScenarioError(tt.scenario)
-			
+
 			isRetryable := IsRetryableError(err)
 			if isRetryable != tt.retryable {
 				t.Errorf("Expected retryable=%v, got %v for scenario %s", tt.retryable, isRetryable, tt.scenario)
@@ -317,11 +317,11 @@ func TestErrorRecovery(t *testing.T) {
 // TestUserFriendlyErrorMessages tests error message clarity and helpfulness
 func TestUserFriendlyErrorMessages(t *testing.T) {
 	tests := []struct {
-		name           string
-		error          error
-		expectClear    bool
+		name             string
+		error            error
+		expectClear      bool
 		expectActionable bool
-		expectContext   bool
+		expectContext    bool
 	}{
 		{
 			name:             "clear network error",
@@ -349,7 +349,7 @@ func TestUserFriendlyErrorMessages(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			enhanced := EnhanceErrorMessage(tt.error)
-			
+
 			// Check if error message is clear
 			if tt.expectClear {
 				if !strings.Contains(enhanced, "Error:") && !strings.Contains(enhanced, "Failed:") {

@@ -83,7 +83,7 @@ func FindRoleFiles(rootPath string) ([]string, error) {
 
 // LoadResult contains the results of loading roles from a directory
 type LoadResult struct {
-	Roles       []models.Role
+	Roles        []models.Role
 	SkippedFiles []SkippedFile
 }
 
@@ -112,7 +112,7 @@ func LoadRolesFromDirectoryWithDetails(rootPath string) (*LoadResult, error) {
 	}
 
 	result := &LoadResult{
-		Roles:       []models.Role{},
+		Roles:        []models.Role{},
 		SkippedFiles: []SkippedFile{},
 	}
 
@@ -148,35 +148,35 @@ func ValidateRole(role models.Role) error {
 // ValidateRoleMembers validates that no member appears in multiple roles
 func ValidateRoleMembers(roles []models.Role) error {
 	memberToRoles := make(map[string][]string)
-	
+
 	for _, role := range roles {
 		// Check for empty member emails within each role
 		memberSet := make(map[string]bool)
-		
+
 		for _, member := range role.Members {
 			// Check for empty or whitespace-only emails
 			if strings.TrimSpace(member) == "" {
 				return fmt.Errorf("empty member email found in role %s", role.Name)
 			}
-			
+
 			// Check for duplicates within the same role
 			if memberSet[member] {
 				return fmt.Errorf("member %s appears multiple times in role %s", member, role.Name)
 			}
 			memberSet[member] = true
-			
+
 			// Track which roles each member appears in
 			memberToRoles[member] = append(memberToRoles[member], role.Name)
 		}
 	}
-	
+
 	// Check for members appearing in multiple roles
 	for member, roleNames := range memberToRoles {
 		if len(roleNames) > 1 {
 			return fmt.Errorf("member %s appears in multiple roles: %s", member, strings.Join(roleNames, ", "))
 		}
 	}
-	
+
 	return nil
 }
 
@@ -224,6 +224,6 @@ func GenerateRoleYAML(role models.Role) (string, error) {
 		header := "# WARNING: The 'id' field is managed by the Replicated API and should not be modified manually.\n# Changing the ID will cause sync operations to fail.\n\n"
 		return header + string(data), nil
 	}
-	
+
 	return string(data), nil
 }

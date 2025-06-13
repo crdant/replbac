@@ -35,7 +35,7 @@ func TestGetTeamMembersWithPolicyId(t *testing.T) {
 		if r.URL.Path != expectedPath {
 			t.Errorf("Expected path %s, got %s", expectedPath, r.URL.Path)
 		}
-		
+
 		// Verify headers
 		if r.Header.Get("Authorization") == "" {
 			t.Error("Missing Authorization header")
@@ -77,7 +77,7 @@ func TestGetTeamMembersWithPolicyId(t *testing.T) {
 		t.Errorf("Expected PolicyID 'policy-123', got '%s'", members[0].PolicyID)
 	}
 
-	// Check second member  
+	// Check second member
 	if members[1].ID != "user2@example.com" {
 		t.Errorf("Expected ID 'user2@example.com', got '%s'", members[1].ID)
 	}
@@ -140,7 +140,7 @@ func TestGetRolesWithMembers(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		
+
 		switch r.URL.Path {
 		case "/vendor/v3/policies":
 			w.Write([]byte(policiesResponse))
@@ -204,7 +204,7 @@ func TestGetRolesWithMembers(t *testing.T) {
 	if len(viewerRole.Members) != 2 {
 		t.Errorf("Expected viewer role to have 2 members, got %d", len(viewerRole.Members))
 	}
-	
+
 	// Check that both viewer members are present (order may vary)
 	expectedMembers := map[string]bool{
 		"user1@example.com": false,

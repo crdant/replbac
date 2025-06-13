@@ -17,11 +17,11 @@ import (
 // TestMockRoundTripDataIntegrity tests complete data integrity through init -> modify -> sync cycle
 func TestMockRoundTripDataIntegrity(t *testing.T) {
 	tests := []struct {
-		name              string
-		initialAPIRoles   []models.Role
+		name               string
+		initialAPIRoles    []models.Role
 		localModifications map[string]string // filename -> new content
-		expectedFinalAPI  []models.Role
-		expectError       bool
+		expectedFinalAPI   []models.Role
+		expectError        bool
 	}{
 		{
 			name: "simple role round-trip preserves data",
@@ -225,7 +225,6 @@ resources:
 				t.Fatalf("Pull command failed: %v", err)
 			}
 
-
 			// Verify pull created expected files
 			for _, role := range tt.initialAPIRoles {
 				fileName := role.Name + ".yaml"
@@ -297,11 +296,11 @@ resources:
 							t.Errorf("Role %s: expected ID %s, got %s", expectedRole.Name, expectedRole.ID, actualRole.ID)
 						}
 						if !stringSlicesEqual(actualRole.Resources.Allowed, expectedRole.Resources.Allowed) {
-							t.Errorf("Role %s: allowed resources mismatch. Expected %v, got %v", 
+							t.Errorf("Role %s: allowed resources mismatch. Expected %v, got %v",
 								expectedRole.Name, expectedRole.Resources.Allowed, actualRole.Resources.Allowed)
 						}
 						if !stringSlicesEqual(actualRole.Resources.Denied, expectedRole.Resources.Denied) {
-							t.Errorf("Role %s: denied resources mismatch. Expected %v, got %v", 
+							t.Errorf("Role %s: denied resources mismatch. Expected %v, got %v",
 								expectedRole.Name, expectedRole.Resources.Denied, actualRole.Resources.Denied)
 						}
 						break
@@ -450,25 +449,25 @@ func NewRoundTripSyncCommand(mockClient *MockClient) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			dryRun, _ := cmd.Flags().GetBool("dry-run")
 			confirm, _ := cmd.Flags().GetBool("confirm")
-			
+
 			// For round-trip tests, automatically confirm destructive operations
 			config := models.Config{
 				APIToken: "test-token",
 				Confirm:  confirm || true, // Always confirm in tests
 				LogLevel: "info",
 			}
-			
+
 			// Use the logging version which supports confirmation
 			logger := logging.NewLogger(cmd.OutOrStdout(), false)
 			return RunSyncCommandWithLogging(cmd, args, mockClient, dryRun, false, true, false, logger, config)
 		},
 	}
-	
+
 	// Add flags
 	cmd.Flags().Bool("dry-run", false, "preview changes without applying them")
 	cmd.Flags().String("roles-dir", "", "directory containing role YAML files")
 	cmd.Flags().Bool("confirm", true, "automatically confirm destructive operations")
-	
+
 	return cmd
 }
 

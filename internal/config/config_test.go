@@ -209,11 +209,11 @@ func TestValidateConfig(t *testing.T) {
 
 func TestGetDefaultConfigPaths(t *testing.T) {
 	paths := GetDefaultConfigPaths()
-	
+
 	if len(paths) == 0 {
 		t.Error("Expected at least one default config path")
 	}
-	
+
 	// Check platform-specific behavior
 	switch runtime.GOOS {
 	case "darwin":
@@ -240,7 +240,7 @@ func TestGetDefaultConfigPaths(t *testing.T) {
 			t.Error("Expected Linux default path not found")
 		}
 	}
-	
+
 	// All paths should be absolute
 	for _, path := range paths {
 		if !filepath.IsAbs(path) {
@@ -253,24 +253,24 @@ func TestLoadConfigWithDefaultPaths(t *testing.T) {
 	// Clean up environment before and after test
 	cleanupEnv()
 	defer cleanupEnv()
-	
+
 	// Create a temporary config file in a known location
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "config.yaml")
 	configContent := `api_token: test-token
 log_level: debug`
-	
+
 	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
 		t.Fatalf("Failed to create config file: %v", err)
 	}
-	
+
 	// Test LoadConfigWithDefaults with our test path
 	config, err := LoadConfigWithDefaults([]string{configPath})
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 		return
 	}
-	
+
 	if config.APIToken != "test-token" {
 		t.Errorf("APIToken = %v, want %v", config.APIToken, "test-token")
 	}
@@ -283,27 +283,27 @@ func TestLoadConfigWithEnvironmentConfigPath(t *testing.T) {
 	// Clean up environment before and after test
 	cleanupEnv()
 	defer cleanupEnv()
-	
+
 	// Create a temporary config file
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "custom-config.yaml")
 	configContent := `api_token: custom-token
 log_level: warn`
-	
+
 	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
 		t.Fatalf("Failed to create config file: %v", err)
 	}
-	
+
 	// Set REPLBAC_CONFIG environment variable
 	os.Setenv("REPLBAC_CONFIG", configPath)
-	
+
 	// Test LoadConfigWithDefaults - it should use REPLBAC_CONFIG path
 	config, err := LoadConfigWithDefaults(nil)
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 		return
 	}
-	
+
 	if config.APIToken != "custom-token" {
 		t.Errorf("APIToken = %v, want %v", config.APIToken, "custom-token")
 	}
@@ -316,28 +316,28 @@ func TestLoadConfigEnvironmentOverridesConfigFile(t *testing.T) {
 	// Clean up environment before and after test
 	cleanupEnv()
 	defer cleanupEnv()
-	
+
 	// Create a temporary config file
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "test-config.yaml")
 	configContent := `api_token: file-token
 log_level: info`
-	
+
 	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
 		t.Fatalf("Failed to create config file: %v", err)
 	}
-	
+
 	// Set both REPLBAC_CONFIG and override env vars
 	os.Setenv("REPLBAC_CONFIG", configPath)
 	os.Setenv("REPLBAC_API_TOKEN", "env-token")
 	os.Setenv("REPLBAC_LOG_LEVEL", "debug")
-	
+
 	config, err := LoadConfigWithDefaults(nil)
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 		return
 	}
-	
+
 	// Environment variables should override config file values
 	if config.APIToken != "env-token" {
 		t.Errorf("APIToken = %v, want %v (env should override)", config.APIToken, "env-token")

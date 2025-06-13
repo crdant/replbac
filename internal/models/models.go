@@ -32,14 +32,14 @@ type APIRole struct {
 
 // Policy represents a full policy object from the Replicated API
 type Policy struct {
-	ID          string `json:"id"`
-	TeamID      string `json:"teamId"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Definition  string `json:"definition"` // JSON string containing APIRole
-	CreatedAt   string `json:"createdAt"`
+	ID          string  `json:"id"`
+	TeamID      string  `json:"teamId"`
+	Name        string  `json:"name"`
+	Description string  `json:"description"`
+	Definition  string  `json:"definition"` // JSON string containing APIRole
+	CreatedAt   string  `json:"createdAt"`
 	ModifiedAt  *string `json:"modifiedAt"`
-	ReadOnly    bool   `json:"readOnly"`
+	ReadOnly    bool    `json:"readOnly"`
 }
 
 // ToAPIRole converts a Role to an APIRole for API communication

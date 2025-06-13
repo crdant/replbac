@@ -67,7 +67,7 @@ func TestREADMEMemberExamples(t *testing.T) {
 	}
 
 	readme := string(content)
-	
+
 	requiredSections := []string{
 		"## Member Management",
 		"### Member Assignment",
@@ -99,7 +99,7 @@ func TestExampleYAMLFiles(t *testing.T) {
 			}
 
 			contentStr := string(content)
-			
+
 			// Check for required YAML structure
 			if !strings.Contains(contentStr, "name:") {
 				t.Errorf("Example file %s missing 'name:' field", filePath)

@@ -9,16 +9,16 @@ import (
 
 // SyncPlan represents the plan for synchronizing local roles with remote roles
 type SyncPlan struct {
-	Creates []models.Role  // Roles that need to be created on remote
+	Creates []models.Role // Roles that need to be created on remote
 	Updates []RoleUpdate  // Roles that need to be updated on remote
 	Deletes []string      // Role names that need to be deleted from remote
 }
 
 // RoleUpdate represents a role that needs to be updated
 type RoleUpdate struct {
-	Name   string       // Role name
-	Local  models.Role  // Local version of the role
-	Remote models.Role  // Remote version of the role
+	Name   string      // Role name
+	Local  models.Role // Local version of the role
+	Remote models.Role // Remote version of the role
 }
 
 // CompareRoles compares local roles with remote roles and returns a sync plan

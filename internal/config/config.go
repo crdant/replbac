@@ -51,17 +51,17 @@ func LoadConfig(configPath string) (models.Config, error) {
 // GetDefaultConfigPaths returns platform-specific default configuration file paths
 func GetDefaultConfigPaths() []string {
 	var paths []string
-	
+
 	switch runtime.GOOS {
 	case "darwin":
 		// macOS: ~/Library/Preferences/com.replicated.replbac/
 		if home, err := os.UserHomeDir(); err == nil {
 			paths = append(paths, filepath.Join(home, "Library", "Preferences", "com.replicated.replbac", "config.yaml"))
-			
+
 			// Also check .config as fallback
 			paths = append(paths, filepath.Join(home, ".config", "replbac", "config.yaml"))
 		}
-		
+
 	case "linux":
 		// Linux: XDG_CONFIG_HOME or $HOME/.config
 		configDir := os.Getenv("XDG_CONFIG_HOME")
@@ -70,18 +70,18 @@ func GetDefaultConfigPaths() []string {
 				configDir = filepath.Join(home, ".config")
 			}
 		}
-		
+
 		if configDir != "" {
 			paths = append(paths, filepath.Join(configDir, "replbac", "config.yaml"))
 		}
-		
+
 	default:
 		// Windows and other platforms: use home directory
 		if home, err := os.UserHomeDir(); err == nil {
 			paths = append(paths, filepath.Join(home, ".replbac", "config.yaml"))
 		}
 	}
-	
+
 	return paths
 }
 
@@ -105,7 +105,7 @@ func LoadConfigWithDefaults(defaultPaths []string) (models.Config, error) {
 		if len(defaultPaths) == 0 {
 			defaultPaths = GetDefaultConfigPaths()
 		}
-		
+
 		for _, configPath := range defaultPaths {
 			if _, err := os.Stat(configPath); err == nil {
 				// File exists, try to load it

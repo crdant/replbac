@@ -42,7 +42,7 @@ func TestRootCommand(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create a new root command for each test to avoid state pollution
 			cmd := createTestRootCmd()
-			
+
 			var output bytes.Buffer
 			cmd.SetOut(&output)
 			cmd.SetErr(&output)
@@ -74,11 +74,11 @@ func TestConfigurationLoading(t *testing.T) {
 	// Create a temporary config file
 	tmpDir := t.TempDir()
 	configFile := tmpDir + "/config.yaml"
-	
+
 	configContent := `api_token: test-token
 log_level: debug
 confirm: true`
-	
+
 	if err := os.WriteFile(configFile, []byte(configContent), 0644); err != nil {
 		t.Fatalf("Failed to create config file: %v", err)
 	}
@@ -213,7 +213,7 @@ and the Replicated platform.`,
 
 	// Add subcommands
 	cmd.AddCommand(versionCmd)
-	
+
 	syncTestCmd := &cobra.Command{
 		Use:   "sync [directory]",
 		Short: "Synchronize local role files to Replicated API",

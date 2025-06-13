@@ -90,7 +90,7 @@ func TestSyncCommandWithMembers(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create mock client that tracks member assignments
 			mockClient := &MockAPIClientWithMemberTracking{
-				roles:            tt.remoteRoles,
+				roles:             tt.remoteRoles,
 				memberAssignments: make(map[string][]string),
 			}
 
@@ -127,12 +127,12 @@ func TestSyncCommandWithMembers(t *testing.T) {
 						t.Errorf("Expected member assignments for role %s, but none were made", roleName)
 						continue
 					}
-					
+
 					if len(actualMembers) != len(expectedMembers) {
 						t.Errorf("Role %s: expected %d member assignments, got %d", roleName, len(expectedMembers), len(actualMembers))
 						continue
 					}
-					
+
 					for _, expectedMember := range expectedMembers {
 						found := false
 						for _, actualMember := range actualMembers {
@@ -202,7 +202,7 @@ func TestPullCommandWithMembers(t *testing.T) {
 		t.Errorf("Expected role names in output, got: %s", output)
 	}
 
-	// The actual YAML generation is tested in roles package, 
+	// The actual YAML generation is tested in roles package,
 	// here we just verify the command runs successfully with member data
 }
 
@@ -305,12 +305,12 @@ func (m *MockAPIClientWithMemberTracking) AssignMemberRoleWithContext(ctx contex
 // createTestRoleFile creates a YAML file for a test role
 func createTestRoleFile(dir string, role models.Role) error {
 	filename := filepath.Join(dir, role.Name+".yaml")
-	
+
 	// Create YAML content
 	yamlData, err := yaml.Marshal(role)
 	if err != nil {
 		return fmt.Errorf("failed to marshal role to YAML: %w", err)
 	}
-	
+
 	return os.WriteFile(filename, yamlData, 0644)
 }

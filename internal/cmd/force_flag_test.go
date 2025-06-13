@@ -14,16 +14,16 @@ import (
 // TestForceFlagBehavior tests the --force flag behavior with confirmation prompts
 func TestForceFlagBehavior(t *testing.T) {
 	tests := []struct {
-		name               string
-		args               []string
-		flags              map[string]string
-		localFiles         map[string]string
-		remoteRoles        []models.Role
-		expectError        bool
-		expectOutput       []string
-		expectNotInOutput  []string
-		expectInteractive  bool // Whether it should prompt for confirmation
-		validateAPICalls   func(t *testing.T, calls *MockAPICalls)
+		name              string
+		args              []string
+		flags             map[string]string
+		localFiles        map[string]string
+		remoteRoles       []models.Role
+		expectError       bool
+		expectOutput      []string
+		expectNotInOutput []string
+		expectInteractive bool // Whether it should prompt for confirmation
+		validateAPICalls  func(t *testing.T, calls *MockAPICalls)
 	}{
 		{
 			name: "sync with delete but no force - prompts for confirmation",
@@ -198,8 +198,8 @@ resources:
 			},
 		},
 		{
-			name: "help shows force flag",
-			args: []string{"--help"},
+			name:        "help shows force flag",
+			args:        []string{"--help"},
 			expectError: false,
 			expectOutput: []string{
 				"--force",
@@ -320,16 +320,16 @@ Use --dry-run to preview changes without applying them.`,
 			dryRun, _ := cmd.Flags().GetBool("dry-run")
 			delete, _ := cmd.Flags().GetBool("delete")
 			force, _ := cmd.Flags().GetBool("force")
-			
+
 			return RunSyncCommandWithForceControl(cmd, args, mockClient, dryRun, delete, force)
 		},
 	}
-	
+
 	cmd.Flags().Bool("dry-run", false, "preview changes without applying them")
 	cmd.Flags().Bool("delete", false, "delete remote roles not present in local files (default: false)")
 	cmd.Flags().Bool("force", false, "skip confirmation prompts (requires --delete)")
 	cmd.Flags().Bool("verbose", false, "enable verbose logging")
-	
+
 	return cmd
 }
 

@@ -148,7 +148,7 @@ func TestGetRoles(t *testing.T) {
 				if r.Method != http.MethodGet {
 					t.Errorf("Expected GET request, got %s", r.Method)
 				}
-				
+
 				// Handle both endpoints now that GetRoles calls both
 				switch r.URL.Path {
 				case "/vendor/v3/policies":
@@ -411,7 +411,7 @@ func TestDeleteRole(t *testing.T) {
 			requestCount := 0
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				requestCount++
-				
+
 				if requestCount == 1 {
 					// First request: GET /vendor/v3/policies to look up ID
 					if r.Method != http.MethodGet {
@@ -420,7 +420,7 @@ func TestDeleteRole(t *testing.T) {
 					if r.URL.Path != "/vendor/v3/policies" {
 						t.Errorf("Expected path /vendor/v3/policies, got %s", r.URL.Path)
 					}
-					
+
 					// Return policy list with the role
 					if tt.roleName == "test-role" {
 						w.WriteHeader(http.StatusOK)
@@ -510,7 +510,7 @@ func TestGetRole(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				// Verify request method and path  
+				// Verify request method and path
 				if r.Method != http.MethodGet {
 					t.Errorf("Expected GET request, got %s", r.Method)
 				}
@@ -597,9 +597,9 @@ func TestGetTeamMembers(t *testing.T) {
 			},
 		},
 		{
-			name:           "empty team members list",
-			mockStatusCode: http.StatusOK,
-			mockResponse:   `[]`,
+			name:            "empty team members list",
+			mockStatusCode:  http.StatusOK,
+			mockResponse:    `[]`,
 			expectedMembers: []models.TeamMember{},
 		},
 		{

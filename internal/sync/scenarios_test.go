@@ -10,7 +10,6 @@ import (
 	"replbac/internal/roles"
 )
 
-
 // TestSyncScenarios tests various end-to-end sync scenarios
 func TestSyncScenarios(t *testing.T) {
 	tests := []struct {
