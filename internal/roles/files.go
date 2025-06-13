@@ -23,7 +23,7 @@ func ReadRoleFile(filePath string) (models.Role, error) {
 	}
 
 	// Read file contents
-	data, err := os.ReadFile(filePath) //nolint:gosec // Reading user-provided file path is expected behavior
+	data, err := os.ReadFile(filePath) // #nosec G304 -- Reading user-provided file path is expected behavior
 	if err != nil {
 		return role, fmt.Errorf("failed to read file: %w", err)
 	}
