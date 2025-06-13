@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -11,16 +12,16 @@ import (
 func TestClientWithRetry(t *testing.T) {
 	tests := []struct {
 		name           string
-		serverBehavior func(attemptCount *int) http.HandlerFunc
+		serverBehavior func(attemptCount *int64) http.HandlerFunc
 		maxRetries     int
 		expectError    bool
-		expectAttempts int
+		expectAttempts int64
 	}{
 		{
 			name: "succeeds on first attempt",
-			serverBehavior: func(attemptCount *int) http.HandlerFunc {
+			serverBehavior: func(attemptCount *int64) http.HandlerFunc {
 				return func(w http.ResponseWriter, r *http.Request) {
-					*attemptCount++
+					atomic.AddInt64(attemptCount, 1)
 					w.WriteHeader(http.StatusOK)
 					if _, err := w.Write([]byte(`{"roles": []}`)); err != nil {
 						t.Errorf("Failed to write response: %v", err)
@@ -33,10 +34,10 @@ func TestClientWithRetry(t *testing.T) {
 		},
 		{
 			name: "succeeds on third attempt",
-			serverBehavior: func(attemptCount *int) http.HandlerFunc {
+			serverBehavior: func(attemptCount *int64) http.HandlerFunc {
 				return func(w http.ResponseWriter, r *http.Request) {
-					*attemptCount++
-					if *attemptCount < 3 {
+					atomic.AddInt64(attemptCount, 1)
+					if atomic.LoadInt64(attemptCount) < 3 {
 						w.WriteHeader(http.StatusInternalServerError)
 						return
 					}
@@ -52,9 +53,9 @@ func TestClientWithRetry(t *testing.T) {
 		},
 		{
 			name: "fails after max retries",
-			serverBehavior: func(attemptCount *int) http.HandlerFunc {
+			serverBehavior: func(attemptCount *int64) http.HandlerFunc {
 				return func(w http.ResponseWriter, r *http.Request) {
-					*attemptCount++
+					atomic.AddInt64(attemptCount, 1)
 					w.WriteHeader(http.StatusInternalServerError)
 				}
 			},
@@ -64,9 +65,9 @@ func TestClientWithRetry(t *testing.T) {
 		},
 		{
 			name: "respects context cancellation",
-			serverBehavior: func(attemptCount *int) http.HandlerFunc {
+			serverBehavior: func(attemptCount *int64) http.HandlerFunc {
 				return func(w http.ResponseWriter, r *http.Request) {
-					*attemptCount++
+					atomic.AddInt64(attemptCount, 1)
 					time.Sleep(100 * time.Millisecond) // Simulate slow response
 					w.WriteHeader(http.StatusInternalServerError)
 				}
@@ -79,7 +80,7 @@ func TestClientWithRetry(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			attemptCount := 0
+			var attemptCount int64
 			server := httptest.NewServer(tt.serverBehavior(&attemptCount))
 			defer server.Close()
 
@@ -105,8 +106,9 @@ func TestClientWithRetry(t *testing.T) {
 				t.Errorf("Expected no error but got: %v", err)
 			}
 
-			if attemptCount != tt.expectAttempts {
-				t.Errorf("Expected %d attempts, got %d", tt.expectAttempts, attemptCount)
+			actualAttempts := atomic.LoadInt64(&attemptCount)
+			if actualAttempts != tt.expectAttempts {
+				t.Errorf("Expected %d attempts, got %d", tt.expectAttempts, actualAttempts)
 			}
 		})
 	}
