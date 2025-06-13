@@ -1,4 +1,0 @@
-name: test-role
-resources:
-  allowed: ["read"]
-  denied: []
