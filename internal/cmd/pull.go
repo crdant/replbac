@@ -146,7 +146,7 @@ func RunPullCommandWithClient(cmd *cobra.Command, outputDir string, dryRun, diff
 
 	// Create output directory if it doesn't exist (unless dry-run)
 	if !dryRun {
-		if err := os.MkdirAll(outputDir, 0755); err != nil {
+		if err := os.MkdirAll(outputDir, 0750); err != nil {
 			return fmt.Errorf("failed to create output directory: %w", err)
 		}
 	}
@@ -160,6 +160,7 @@ func RunPullCommandWithClient(cmd *cobra.Command, outputDir string, dryRun, diff
 		existingContent := ""
 		if _, err := os.Stat(filePath); err == nil {
 			// File exists
+			// #nosec G304 -- Reading user file to check for conflicts is expected behavior
 			if existingBytes, readErr := os.ReadFile(filePath); readErr == nil {
 				existingContent = string(existingBytes)
 			}

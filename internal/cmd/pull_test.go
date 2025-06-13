@@ -220,14 +220,18 @@ func TestPullCommand(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Failed to create temp dir: %v", err)
 			}
-			defer os.RemoveAll(tempDir)
+			defer func() { _ = os.RemoveAll(tempDir) }()
 
 			// Change to temp directory
 			oldDir, err := os.Getwd()
 			if err != nil {
 				t.Fatalf("Failed to get working directory: %v", err)
 			}
-			defer os.Chdir(oldDir)
+			defer func() {
+				if err := os.Chdir(oldDir); err != nil {
+					t.Fatalf("Failed to restore working directory: %v", err)
+				}
+			}()
 
 			if err := os.Chdir(tempDir); err != nil {
 				t.Fatalf("Failed to change to temp dir: %v", err)
@@ -238,10 +242,12 @@ func TestPullCommand(t *testing.T) {
 				filePath := fileName
 				if strings.Contains(fileName, "/") {
 					// Create directory structure if needed
+					// #nosec G301 -- Test directories need readable permissions
 					if err := os.MkdirAll(filepath.Dir(filePath), 0755); err != nil {
 						t.Fatalf("Failed to create directory structure: %v", err)
 					}
 				}
+				// #nosec G306 -- Test files need readable permissions
 				if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
 					t.Fatalf("Failed to create existing file %s: %v", fileName, err)
 				}
@@ -298,6 +304,7 @@ func TestPullCommand(t *testing.T) {
 
 			// Check expected files
 			for fileName, expectedContent := range tt.expectFiles {
+				// #nosec G304 -- Reading test file path is expected behavior in tests
 				actualContent, err := os.ReadFile(fileName)
 				if err != nil {
 					t.Errorf("Expected file %s to exist but couldn't read it: %v", fileName, err)

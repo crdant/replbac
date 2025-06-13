@@ -312,5 +312,6 @@ func createTestRoleFile(dir string, role models.Role) error {
 		return fmt.Errorf("failed to marshal role to YAML: %w", err)
 	}
 
+	// #nosec G306 -- Test files need readable permissions
 	return os.WriteFile(filename, yamlData, 0644)
 }

@@ -235,16 +235,18 @@ resources:
 			if err != nil {
 				t.Fatalf("Failed to create temp dir: %v", err)
 			}
-			defer os.RemoveAll(tempDir)
+			defer func() { _ = os.RemoveAll(tempDir) }()
 
 			// Create test files
 			for fileName, content := range tt.files {
 				filePath := filepath.Join(tempDir, fileName)
 				fileDir := filepath.Dir(filePath)
+				// #nosec G301 -- Test directories need readable permissions
 				err := os.MkdirAll(fileDir, 0755)
 				if err != nil {
 					t.Fatalf("Failed to create file dir: %v", err)
 				}
+				// #nosec G306 -- Test files need readable permissions
 				err = os.WriteFile(filePath, []byte(content), 0644)
 				if err != nil {
 					t.Fatalf("Failed to write test file: %v", err)
@@ -260,7 +262,11 @@ resources:
 			if err != nil {
 				t.Fatalf("Failed to get current dir: %v", err)
 			}
-			defer os.Chdir(oldDir)
+			defer func() {
+				if err := os.Chdir(oldDir); err != nil {
+					t.Fatalf("Failed to restore working directory: %v", err)
+				}
+			}()
 			err = os.Chdir(tempDir)
 			if err != nil {
 				t.Fatalf("Failed to change to temp dir: %v", err)
@@ -274,7 +280,9 @@ resources:
 
 			// Set flags
 			for flag, value := range tt.flags {
-				cmd.Flags().Set(flag, value)
+				if err := cmd.Flags().Set(flag, value); err != nil {
+					t.Fatalf("Failed to set flag %s: %v", flag, err)
+				}
 			}
 
 			// Execute command
@@ -368,7 +376,7 @@ func TestSyncCommandConfiguration(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Failed to create temp dir: %v", err)
 			}
-			defer os.RemoveAll(tempDir)
+			defer func() { _ = os.RemoveAll(tempDir) }()
 
 			// Create config file if needed
 			if len(tt.config) > 0 {
@@ -377,6 +385,7 @@ func TestSyncCommandConfiguration(t *testing.T) {
 				for key, value := range tt.config {
 					configContent.WriteString(fmt.Sprintf("%s: %s\n", key, value))
 				}
+				// #nosec G306 -- Test files need readable permissions
 				err = os.WriteFile(configPath, []byte(configContent.String()), 0644)
 				if err != nil {
 					t.Fatalf("Failed to write config file: %v", err)
@@ -386,8 +395,14 @@ func TestSyncCommandConfiguration(t *testing.T) {
 			// Set environment variables
 			for key, value := range tt.envVars {
 				oldValue := os.Getenv(key)
-				os.Setenv(key, value)
-				defer os.Setenv(key, oldValue)
+				if err := os.Setenv(key, value); err != nil {
+					t.Fatalf("Failed to set environment variable %s: %v", key, err)
+				}
+				defer func(k, v string) {
+					if err := os.Setenv(k, v); err != nil {
+						t.Errorf("Failed to restore environment variable %s: %v", k, err)
+					}
+				}(key, oldValue)
 			}
 
 			// Setup command based on test type
@@ -405,6 +420,12 @@ func TestSyncCommandConfiguration(t *testing.T) {
 						return RunSyncCommand(cmd, args, config, false, false, false, false)
 					},
 				}
+				// Add the same flags as NewSyncCommand
+				cmd.Flags().Bool("dry-run", false, "preview changes without applying them")
+				cmd.Flags().String("roles-dir", "", "directory containing role YAML files")
+				cmd.Flags().Bool("delete", false, "delete remote roles not present in local files")
+				cmd.Flags().String("api-token", "", "Replicated API token")
+				cmd.Flags().String("config", "", "config file path")
 			} else {
 				// Other tests use mock client to avoid real API calls
 				mockCalls := &MockAPICalls{}
@@ -418,12 +439,16 @@ func TestSyncCommandConfiguration(t *testing.T) {
 			// Set config file flag if config exists
 			if len(tt.config) > 0 {
 				configPath := filepath.Join(tempDir, "config.yaml")
-				cmd.Flags().Set("config", configPath)
+				if err := cmd.Flags().Set("config", configPath); err != nil {
+					t.Fatalf("Failed to set config flag: %v", err)
+				}
 			}
 
 			// Set other flags
 			for flag, value := range tt.flags {
-				cmd.Flags().Set(flag, value)
+				if err := cmd.Flags().Set(flag, value); err != nil {
+					t.Fatalf("Failed to set flag %s: %v", flag, err)
+				}
 			}
 
 			// Execute command
@@ -635,6 +660,8 @@ func NewSyncCommand(mockClient *MockClient) *cobra.Command {
 	cmd.Flags().Bool("dry-run", false, "preview changes without applying them")
 	cmd.Flags().String("roles-dir", "", "directory containing role YAML files")
 	cmd.Flags().Bool("delete", false, "delete remote roles not present in local files")
+	cmd.Flags().String("api-token", "", "Replicated API token")
+	cmd.Flags().String("config", "", "config file path")
 
 	return cmd
 }

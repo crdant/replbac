@@ -46,7 +46,9 @@ func TestGetTeamMembersWithPolicyId(t *testing.T) {
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(mockResponse))
+		if _, err := w.Write([]byte(mockResponse)); err != nil {
+			t.Errorf("Failed to write mock response: %v", err)
+		}
 	}))
 	defer server.Close()
 
@@ -143,9 +145,13 @@ func TestGetRolesWithMembers(t *testing.T) {
 
 		switch r.URL.Path {
 		case "/vendor/v3/policies":
-			w.Write([]byte(policiesResponse))
+			if _, err := w.Write([]byte(policiesResponse)); err != nil {
+				t.Errorf("Failed to write policies response: %v", err)
+			}
 		case "/v1/team/members":
-			w.Write([]byte(membersResponse))
+			if _, err := w.Write([]byte(membersResponse)); err != nil {
+				t.Errorf("Failed to write members response: %v", err)
+			}
 		default:
 			t.Errorf("Unexpected endpoint called: %s", r.URL.Path)
 			w.WriteHeader(http.StatusNotFound)

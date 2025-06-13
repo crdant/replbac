@@ -110,7 +110,7 @@ func (c *Client) executeWithRetry(ctx context.Context, req *http.Request) (*http
 
 		// Check if we should retry based on status code
 		if resp.StatusCode >= 500 && resp.StatusCode < 600 {
-			resp.Body.Close()
+			_ = resp.Body.Close() //nolint:errcheck
 			lastErr = fmt.Errorf("server error: HTTP %d", resp.StatusCode)
 			c.logger.Warn("request attempt %d failed with server error: HTTP %d", attempt+1, resp.StatusCode)
 			continue
@@ -147,7 +147,7 @@ func (c *Client) getPoliciesWithContext(ctx context.Context) ([]models.Policy, e
 		c.logger.Error("HTTP request failed for %s: %v", url, err)
 		return nil, fmt.Errorf("failed to execute request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	c.logger.Debug("received HTTP response: status=%d", resp.StatusCode)
 	if resp.StatusCode != http.StatusOK {
@@ -290,7 +290,7 @@ func (c *Client) CreateRole(role models.Role) error {
 		c.logger.Error("HTTP request failed for CreateRole %s: %v", role.Name, err)
 		return fmt.Errorf("failed to execute request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	c.logger.Debug("CreateRole response for %s: status=%d", role.Name, resp.StatusCode)
 	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
@@ -349,7 +349,7 @@ func (c *Client) UpdateRole(role models.Role) error {
 		c.logger.Error("HTTP request failed for UpdateRole %s: %v", role.Name, err)
 		return fmt.Errorf("failed to execute request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	c.logger.Debug("UpdateRole response for %s: status=%d", role.Name, resp.StatusCode)
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
@@ -402,7 +402,7 @@ func (c *Client) DeleteRole(roleName string) error {
 		c.logger.Error("HTTP request failed for DeleteRole %s: %v", roleName, err)
 		return fmt.Errorf("failed to execute request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	c.logger.Debug("DeleteRole response for %s: status=%d", roleName, resp.StatusCode)
 	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
@@ -527,7 +527,7 @@ func (c *Client) CreateRoleWithContext(ctx context.Context, role models.Role) er
 		c.logger.Error("HTTP request failed for creating role '%s': %v", role.Name, err)
 		return fmt.Errorf("failed to execute request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	c.logger.Debug("received HTTP response for creating role '%s': status=%d", role.Name, resp.StatusCode)
 	if resp.StatusCode != http.StatusCreated {
@@ -582,7 +582,7 @@ func (c *Client) UpdateRoleWithContext(ctx context.Context, role models.Role) er
 		c.logger.Error("HTTP request failed for updating role '%s': %v", role.Name, err)
 		return fmt.Errorf("failed to execute request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	c.logger.Debug("received HTTP response for updating role '%s': status=%d", role.Name, resp.StatusCode)
 	if resp.StatusCode != http.StatusOK {
@@ -629,7 +629,7 @@ func (c *Client) DeleteRoleWithContext(ctx context.Context, roleName string) err
 		c.logger.Error("HTTP request failed for deleting role '%s': %v", roleName, err)
 		return fmt.Errorf("failed to execute request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	c.logger.Debug("received HTTP response for deleting role '%s': status=%d", roleName, resp.StatusCode)
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
@@ -671,7 +671,7 @@ func (c *Client) GetTeamMembersWithContext(ctx context.Context) ([]models.TeamMe
 		c.logger.Error("HTTP request failed for %s: %v", url, err)
 		return nil, fmt.Errorf("failed to execute request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	c.logger.Debug("received HTTP response: status=%d", resp.StatusCode)
 	if resp.StatusCode != http.StatusOK {
@@ -737,7 +737,7 @@ func (c *Client) AssignMemberRoleWithContext(ctx context.Context, memberEmail, r
 		c.logger.Error("HTTP request failed for %s: %v", url, err)
 		return fmt.Errorf("failed to execute request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	c.logger.Debug("received HTTP response for role assignment: status=%d", resp.StatusCode)
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {

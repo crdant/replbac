@@ -92,6 +92,7 @@ func TestExampleYAMLFiles(t *testing.T) {
 
 	for _, filePath := range exampleFiles {
 		t.Run(filePath, func(t *testing.T) {
+			// #nosec G304 -- Reading test file path is expected behavior in tests
 			content, err := os.ReadFile(filePath)
 			if err != nil {
 				t.Errorf("Example file %s does not exist: %v", filePath, err)

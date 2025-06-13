@@ -1,4 +1,4 @@
-.PHONY: build test clean lint fmt ci coverage install man install-man help
+.PHONY: build test clean lint fmt ci install man install-man help
 
 # Build variables
 BINARY_NAME=replbac
@@ -58,11 +58,6 @@ install-man: man ## Install man page to system
 	@sudo cp $(MAN_FILE) /usr/local/share/man/man1/
 	@echo "Man page installed to /usr/local/share/man/man1/"
 
-coverage: ## Run tests with coverage
-	@echo "Running tests with coverage..."
-	@go test -race -coverprofile=coverage.txt -covermode=atomic ./...
-	@go tool cover -html=coverage.txt -o coverage.html
-	@echo "Coverage report generated: coverage.html"
 
 ci: fmt lint test ## Run all CI checks locally
 	@echo "All CI checks passed!"

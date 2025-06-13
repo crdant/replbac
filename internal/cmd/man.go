@@ -185,5 +185,5 @@ func WriteManPageToFile(filename string) error {
 		return err
 	}
 
-	return os.WriteFile(filename, []byte(content), 0644)
+	return os.WriteFile(filename, []byte(content), 0644) // #nosec G306 -- Man pages should be world-readable
 }

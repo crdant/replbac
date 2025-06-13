@@ -102,6 +102,7 @@ func TestWriteManPageToFile(t *testing.T) {
 	}
 
 	// Read and verify content
+	// #nosec G304 -- Reading test file path is expected behavior in tests
 	content, err := os.ReadFile(manFile)
 	if err != nil {
 		t.Fatalf("Failed to read man page file: %v", err)

@@ -215,14 +215,18 @@ resources:
 			if err != nil {
 				t.Fatalf("Failed to create temp dir: %v", err)
 			}
-			defer os.RemoveAll(tempDir)
+			defer func() { _ = os.RemoveAll(tempDir) }()
 
 			// Change to temp directory
 			oldDir, err := os.Getwd()
 			if err != nil {
 				t.Fatalf("Failed to get working directory: %v", err)
 			}
-			defer os.Chdir(oldDir)
+			defer func() {
+				if err := os.Chdir(oldDir); err != nil {
+					t.Errorf("Failed to restore directory: %v", err)
+				}
+			}()
 
 			if err := os.Chdir(tempDir); err != nil {
 				t.Fatalf("Failed to change to temp dir: %v", err)
@@ -230,6 +234,7 @@ resources:
 
 			// Create local files if specified
 			for fileName, content := range tt.localFiles {
+				// #nosec G306 -- Test files need readable permissions
 				if err := os.WriteFile(fileName, []byte(content), 0644); err != nil {
 					t.Fatalf("Failed to create file %s: %v", fileName, err)
 				}

@@ -180,6 +180,7 @@ resources:
 			tmpDir := t.TempDir()
 			filePath := filepath.Join(tmpDir, tt.fileName)
 
+			// #nosec G306 -- Test files need readable permissions
 			if err := os.WriteFile(filePath, []byte(tt.fileContent), 0644); err != nil {
 				t.Fatalf("Failed to create test file: %v", err)
 			}
@@ -233,9 +234,11 @@ resources:
 
 	for relPath, content := range roleFiles {
 		filePath := filepath.Join(tmpDir, relPath)
+		// #nosec G301 -- Test directories need readable permissions
 		if err := os.MkdirAll(filepath.Dir(filePath), 0755); err != nil {
 			t.Fatalf("Failed to create directory: %v", err)
 		}
+		// #nosec G306 -- Test files need readable permissions
 		if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
 			t.Fatalf("Failed to create file %s: %v", filePath, err)
 		}
@@ -328,9 +331,11 @@ resources:
 
 	for relPath, content := range roleFiles {
 		filePath := filepath.Join(tmpDir, relPath)
+		// #nosec G301 -- Test directories need readable permissions
 		if err := os.MkdirAll(filepath.Dir(filePath), 0755); err != nil {
 			t.Fatalf("Failed to create directory: %v", err)
 		}
+		// #nosec G306 -- Test files need readable permissions
 		if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
 			t.Fatalf("Failed to create file %s: %v", filePath, err)
 		}

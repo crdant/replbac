@@ -115,7 +115,9 @@ confirm: true`,
 
 			// Set environment variables
 			for key, value := range tt.envVars {
-				os.Setenv(key, value)
+				if err := os.Setenv(key, value); err != nil {
+					t.Fatalf("Failed to set environment variable %s: %v", key, err)
+				}
 			}
 
 			var configPath string
@@ -123,6 +125,7 @@ confirm: true`,
 				// Create temporary config file
 				tmpDir := t.TempDir()
 				configPath = filepath.Join(tmpDir, tt.configFile)
+				// #nosec G306 -- Test files need readable permissions
 				if err := os.WriteFile(configPath, []byte(tt.configContent), 0644); err != nil {
 					t.Fatalf("Failed to create config file: %v", err)
 				}
@@ -260,6 +263,7 @@ func TestLoadConfigWithDefaultPaths(t *testing.T) {
 	configContent := `api_token: test-token
 log_level: debug`
 
+	// #nosec G306 -- Test files need readable permissions
 	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
 		t.Fatalf("Failed to create config file: %v", err)
 	}
@@ -290,12 +294,15 @@ func TestLoadConfigWithEnvironmentConfigPath(t *testing.T) {
 	configContent := `api_token: custom-token
 log_level: warn`
 
+	// #nosec G306 -- Test files need readable permissions
 	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
 		t.Fatalf("Failed to create config file: %v", err)
 	}
 
 	// Set REPLBAC_CONFIG environment variable
-	os.Setenv("REPLBAC_CONFIG", configPath)
+	if err := os.Setenv("REPLBAC_CONFIG", configPath); err != nil {
+		t.Fatalf("Failed to set REPLBAC_CONFIG: %v", err)
+	}
 
 	// Test LoadConfigWithDefaults - it should use REPLBAC_CONFIG path
 	config, err := LoadConfigWithDefaults(nil)
@@ -323,14 +330,21 @@ func TestLoadConfigEnvironmentOverridesConfigFile(t *testing.T) {
 	configContent := `api_token: file-token
 log_level: info`
 
+	// #nosec G306 -- Test files need readable permissions
 	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
 		t.Fatalf("Failed to create config file: %v", err)
 	}
 
 	// Set both REPLBAC_CONFIG and override env vars
-	os.Setenv("REPLBAC_CONFIG", configPath)
-	os.Setenv("REPLBAC_API_TOKEN", "env-token")
-	os.Setenv("REPLBAC_LOG_LEVEL", "debug")
+	if err := os.Setenv("REPLBAC_CONFIG", configPath); err != nil {
+		t.Fatalf("Failed to set REPLBAC_CONFIG: %v", err)
+	}
+	if err := os.Setenv("REPLBAC_API_TOKEN", "env-token"); err != nil {
+		t.Fatalf("Failed to set REPLBAC_API_TOKEN: %v", err)
+	}
+	if err := os.Setenv("REPLBAC_LOG_LEVEL", "debug"); err != nil {
+		t.Fatalf("Failed to set REPLBAC_LOG_LEVEL: %v", err)
+	}
 
 	config, err := LoadConfigWithDefaults(nil)
 	if err != nil {
@@ -356,6 +370,6 @@ func cleanupEnv() {
 		"REPLBAC_CONFIG",
 	}
 	for _, env := range envVars {
-		os.Unsetenv(env)
+		_ = os.Unsetenv(env)
 	}
 }

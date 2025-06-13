@@ -359,7 +359,7 @@ func TestSyncWithFileOperations(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer func() { _ = os.RemoveAll(tempDir) }()
 
 	tests := []struct {
 		name        string
@@ -479,6 +479,7 @@ resources:
 		t.Run(tt.name, func(t *testing.T) {
 			// Create test files
 			testDir := filepath.Join(tempDir, tt.name)
+			// #nosec G301 -- Test directories need readable permissions
 			err := os.MkdirAll(testDir, 0755)
 			if err != nil {
 				t.Fatalf("Failed to create test dir: %v", err)
@@ -487,10 +488,12 @@ resources:
 			for fileName, content := range tt.files {
 				filePath := filepath.Join(testDir, fileName)
 				fileDir := filepath.Dir(filePath)
+				// #nosec G301 -- Test directories need readable permissions
 				err := os.MkdirAll(fileDir, 0755)
 				if err != nil {
 					t.Fatalf("Failed to create file dir: %v", err)
 				}
+				// #nosec G306 -- Test files need readable permissions
 				err = os.WriteFile(filePath, []byte(content), 0644)
 				if err != nil {
 					t.Fatalf("Failed to write test file: %v", err)

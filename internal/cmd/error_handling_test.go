@@ -55,12 +55,13 @@ func TestEnhancedErrorHandling(t *testing.T) {
 resources:
   - invalid: structure
   - that: [will, cause, parsing, errors`
+				// #nosec G306 -- Test files need readable permissions
 				err = os.WriteFile(filepath.Join(tempDir, "invalid.yaml"), []byte(invalidYAML), 0644)
 				if err != nil {
 					t.Fatalf("Failed to write invalid YAML: %v", err)
 				}
 
-				return tempDir, func() { os.RemoveAll(tempDir) }
+				return tempDir, func() { _ = os.RemoveAll(tempDir) }
 			},
 			config: models.Config{
 				APIToken: "test-token",
@@ -82,12 +83,13 @@ resources:
 resources:
   allowed: ["read"]
   denied: []`
+				// #nosec G306 -- Test files need readable permissions
 				err = os.WriteFile(filepath.Join(tempDir, "valid.yaml"), []byte(validYAML), 0644)
 				if err != nil {
 					t.Fatalf("Failed to write valid YAML: %v", err)
 				}
 
-				return tempDir, func() { os.RemoveAll(tempDir) }
+				return tempDir, func() { _ = os.RemoveAll(tempDir) }
 			},
 			config: models.Config{
 				APIToken: "test-token",
@@ -125,12 +127,13 @@ resources:
 resources:
   allowed: ["*"]
   denied: []`
+				// #nosec G306 -- Test files need readable permissions
 				err = os.WriteFile(filepath.Join(tempDir, "problematic.yaml"), []byte(problematicYAML), 0644)
 				if err != nil {
 					t.Fatalf("Failed to write problematic YAML: %v", err)
 				}
 
-				return tempDir, func() { os.RemoveAll(tempDir) }
+				return tempDir, func() { _ = os.RemoveAll(tempDir) }
 			},
 			config: models.Config{
 				APIToken: "test-token",
@@ -157,8 +160,8 @@ resources:
 				}
 
 				return restrictedDir, func() {
-					os.Chmod(restrictedDir, 0755) // Restore permissions for cleanup
-					os.RemoveAll(tempDir)
+					_ = os.Chmod(restrictedDir, 0755) // #nosec G302 -- Restore permissions for test cleanup
+					_ = os.RemoveAll(tempDir)
 				}
 			},
 			config: models.Config{
@@ -195,7 +198,9 @@ resources:
 
 			// Set flags
 			for flag, value := range tt.flags {
-				cmd.Flags().Set(flag, value)
+				if err := cmd.Flags().Set(flag, value); err != nil {
+					t.Fatalf("Failed to set flag %s: %v", flag, err)
+				}
 			}
 
 			// Change to test directory if provided
@@ -204,7 +209,11 @@ resources:
 				if err != nil {
 					t.Fatalf("Failed to get current dir: %v", err)
 				}
-				defer os.Chdir(oldDir)
+				defer func() {
+					if err := os.Chdir(oldDir); err != nil {
+						t.Errorf("Failed to restore directory: %v", err)
+					}
+				}()
 
 				// Use testDir as argument instead of changing directory
 				tt.args = []string{testDir}

@@ -94,7 +94,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&logLevel, "log-level", "", "log level: debug, info, warn, error (env: REPLBAC_LOG_LEVEL)")
 
 	// Mark sensitive flags
-	rootCmd.PersistentFlags().MarkHidden("api-token")
+	_ = rootCmd.PersistentFlags().MarkHidden("api-token") //nolint:errcheck
 
 	// Override help function to position environment variables before final Use message
 	originalHelpFunc := rootCmd.HelpFunc()

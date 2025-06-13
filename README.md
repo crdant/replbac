@@ -2,7 +2,6 @@
 
 [![CI](https://github.com/crdant/replbac/workflows/CI/badge.svg)](https://github.com/crdant/replbac/actions/workflows/ci.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/crdant/replbac)](https://goreportcard.com/report/github.com/crdant/replbac)
-[![codecov](https://codecov.io/gh/crdant/replbac/branch/main/graph/badge.svg)](https://codecov.io/gh/crdant/replbac)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Release](https://img.shields.io/github/release/crdant/replbac.svg)](https://github.com/crdant/replbac/releases/latest)
 
@@ -19,7 +18,7 @@
 
 ## 📋 Requirements
 
-- Go 1.16 or later (for building from source)
+- Go 1.23 or later (for building from source)
 - A Replicated Vendor account with API token
 
 ## 🔧 Installation

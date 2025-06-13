@@ -56,7 +56,8 @@ func TestPanicRecovery(t *testing.T) {
 			defer func() {
 				os.Stderr = oldStderr
 				osExit = oldExit
-				w.Close()
+				// Close writer if not already closed - ignore errors as it may already be closed
+				_ = w.Close()
 			}()
 
 			// Test panic recovery
@@ -66,9 +67,13 @@ func TestPanicRecovery(t *testing.T) {
 			}()
 
 			// Close writer and read stderr
-			w.Close()
+			if err := w.Close(); err != nil {
+				t.Errorf("Failed to close writer: %v", err)
+			}
 			var stderr bytes.Buffer
-			stderr.ReadFrom(r)
+			if _, err := stderr.ReadFrom(r); err != nil {
+				t.Errorf("Failed to read from stderr: %v", err)
+			}
 
 			if exitCalled != tt.expectExit {
 				t.Errorf("Expected exit=%v, got %v", tt.expectExit, exitCalled)
@@ -117,7 +122,8 @@ func TestStackTraceInPanicRecovery(t *testing.T) {
 	defer func() {
 		os.Stderr = oldStderr
 		osExit = oldExit
-		w.Close()
+		// Close writer if not already closed - ignore errors as it may already be closed
+		_ = w.Close()
 	}()
 
 	// Test panic with stack trace
@@ -133,9 +139,13 @@ func TestStackTraceInPanicRecovery(t *testing.T) {
 	}()
 
 	// Close writer and read stderr
-	w.Close()
+	if err := w.Close(); err != nil {
+		t.Errorf("Failed to close writer: %v", err)
+	}
 	var stderr bytes.Buffer
-	stderr.ReadFrom(r)
+	if _, err := stderr.ReadFrom(r); err != nil {
+		t.Errorf("Failed to read from stderr: %v", err)
+	}
 
 	stderrStr := stderr.String()
 	if stderrStr == "" {

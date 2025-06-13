@@ -258,16 +258,18 @@ resources:
 			if err != nil {
 				t.Fatalf("Failed to create temp dir: %v", err)
 			}
-			defer os.RemoveAll(tempDir)
+			defer func() { _ = os.RemoveAll(tempDir) }()
 
 			// Setup test files
 			for fileName, content := range tt.setupFiles {
 				filePath := filepath.Join(tempDir, fileName)
 				fileDir := filepath.Dir(filePath)
+				// #nosec G301 -- Test directories need readable permissions
 				err := os.MkdirAll(fileDir, 0755)
 				if err != nil {
 					t.Fatalf("Failed to create file dir: %v", err)
 				}
+				// #nosec G306 -- Test files need readable permissions
 				err = os.WriteFile(filePath, []byte(content), 0644)
 				if err != nil {
 					t.Fatalf("Failed to write test file: %v", err)
@@ -283,7 +285,11 @@ resources:
 			if err != nil {
 				t.Fatalf("Failed to get current dir: %v", err)
 			}
-			defer os.Chdir(oldDir)
+			defer func() {
+				if err := os.Chdir(oldDir); err != nil {
+					t.Errorf("Failed to restore directory: %v", err)
+				}
+			}()
 			err = os.Chdir(tempDir)
 			if err != nil {
 				t.Fatalf("Failed to change to temp dir: %v", err)
@@ -300,7 +306,9 @@ resources:
 
 					// Set flags
 					for flag, value := range step.flags {
-						cmd.Flags().Set(flag, value)
+						if err := cmd.Flags().Set(flag, value); err != nil {
+							t.Fatalf("Failed to set flag %s=%s: %v", flag, value, err)
+						}
 					}
 
 					// Execute command
@@ -394,7 +402,7 @@ func TestWorkflowPerformance(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Failed to create temp dir: %v", err)
 			}
-			defer os.RemoveAll(tempDir)
+			defer func() { _ = os.RemoveAll(tempDir) }()
 
 			// Generate role files
 			for i := 0; i < tt.roleCount; i++ {
@@ -403,6 +411,7 @@ resources:
   allowed: ["read", "write"]
   denied: []`, i)
 				fileName := fmt.Sprintf("role-%d.yaml", i)
+				// #nosec G306 -- Test files need readable permissions
 				err = os.WriteFile(filepath.Join(tempDir, fileName), []byte(roleContent), 0644)
 				if err != nil {
 					t.Fatalf("Failed to write role file %d: %v", i, err)
@@ -418,7 +427,11 @@ resources:
 			if err != nil {
 				t.Fatalf("Failed to get current dir: %v", err)
 			}
-			defer os.Chdir(oldDir)
+			defer func() {
+				if err := os.Chdir(oldDir); err != nil {
+					t.Errorf("Failed to restore directory: %v", err)
+				}
+			}()
 			err = os.Chdir(tempDir)
 			if err != nil {
 				t.Fatalf("Failed to change to temp dir: %v", err)
