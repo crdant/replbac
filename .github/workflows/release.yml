@@ -136,7 +136,7 @@ jobs:
         ./dist/linux/amd64/replbac version
 
     - name: Create archives
-      run:
+      run: |
         bin_dir=dist/linux/amd64
         workspace="$(pwd)"
         output_name=replbac-v0.0.1-linux-amd64
