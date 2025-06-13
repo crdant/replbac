@@ -37,10 +37,10 @@ install: build ## Install binary locally
 	@echo "Installing $(BINARY_NAME)..."
 	@cp $(BUILD_DIR)/$(BINARY_NAME) $(GOPATH)/bin/$(BINARY_NAME)
 
-man: build ## Generate man page
+man: ## Generate man page
 	@echo "Generating man page..."
 	@mkdir -p $(MAN_DIR)
-	@$(BUILD_DIR)/$(BINARY_NAME) man --output $(MAN_FILE)
+	@go run cmd/gen-man/main.go --output $(MAN_FILE)
 	@echo "Man page generated at $(MAN_FILE)"
 
 install-man: man ## Install man page to system

@@ -1,53 +1,10 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 	"strings"
 	"time"
-
-	"github.com/spf13/cobra"
 )
-
-var (
-	manOutputFile string
-)
-
-// NewManCmd creates the man page generation command
-func NewManCmd() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "man",
-		Short: "Generate man page for replbac",
-		Long: `Generate a man page for replbac in standard Unix manual format.
-This command outputs the man page content to stdout by default, or to a
-specified file using the --output flag.
-
-The generated man page includes all commands, flags, environment variables,
-and usage examples in standard groff format suitable for installation
-in the system man page directories.`,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			content, err := GenerateManPage()
-			if err != nil {
-				return fmt.Errorf("failed to generate man page: %w", err)
-			}
-
-			if manOutputFile != "" {
-				if err := WriteManPageToFile(manOutputFile); err != nil {
-					return fmt.Errorf("failed to write man page to file: %w", err)
-				}
-				cmd.Printf("Man page written to %s\n", manOutputFile)
-			} else {
-				cmd.Print(content)
-			}
-
-			return nil
-		},
-	}
-
-	cmd.Flags().StringVarP(&manOutputFile, "output", "o", "", "output file for man page (default: stdout)")
-
-	return cmd
-}
 
 // GenerateManPage generates the complete man page content in groff format
 func GenerateManPage() (string, error) {
@@ -231,6 +188,3 @@ func WriteManPageToFile(filename string) error {
 	return os.WriteFile(filename, []byte(content), 0644)
 }
 
-func init() {
-	rootCmd.AddCommand(NewManCmd())
-}

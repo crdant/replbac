@@ -118,23 +118,19 @@ func TestWriteManPageToFile(t *testing.T) {
 	}
 }
 
-func TestManPageCommand(t *testing.T) {
-	// Test that the man page generation command exists and runs
-	cmd := NewManCmd()
-	
-	if cmd == nil {
-		t.Fatal("NewManCmd() returned nil")
+func TestManPageGenerator(t *testing.T) {
+	// Test that the man page generation works standalone
+	content, err := GenerateManPage()
+	if err != nil {
+		t.Fatalf("GenerateManPage() failed: %v", err)
 	}
 
-	if cmd.Use != "man" {
-		t.Errorf("Expected command use 'man', got %q", cmd.Use)
+	if strings.TrimSpace(content) == "" {
+		t.Fatal("Generated man page content is empty")
 	}
 
-	if cmd.Short == "" {
-		t.Error("Man command missing short description")
-	}
-
-	if cmd.Long == "" {
-		t.Error("Man command missing long description")
+	// Check it starts with proper man page header
+	if !strings.HasPrefix(content, ".TH REPLBAC 1") {
+		t.Error("Man page does not start with proper header")
 	}
 }
