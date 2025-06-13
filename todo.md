@@ -82,10 +82,22 @@
 - [x] Update sync comparison logic in `internal/sync/compare.go` to handle member assignments
 - [x] Add member assignment execution to `internal/sync/executor.go`
 - [x] Update CLI commands to support member sync operations
-- [ ] Add comprehensive tests for member management functionality
-- [ ] Update documentation and examples to show members field usage
+- [x] Add comprehensive tests for member management functionality
+- [x] Update documentation and examples to show members field usage
 
-#### Step 12: Expose Public API
+#### Step 12: CI/CD Implementation
+- [ ] Implement format, lint, test, and build pipeline for all commits
+- [ ] Build for window, mac, and linux on arm64 and amd64
+- [ ] Add pull request checks and status badges
+- [ ] Implement SLSA compliant release pipeline
+
+#### Step 14: Build System and Integration
+- [ ] Complete Makefile with all targets
+- [ ] Add comprehensive integration tests
+- [ ] Cross-platform build support
+- [ ] Final documentation and security review
+
+#### Step 14: Expose Public API
 - [ ] Move `internal/models` to `pkg/models` - Core data structures for roles and API communication
 - [ ] Move `internal/api` to `pkg/api` with logger interface - HTTP client for Replicated API operations
 - [ ] Move `internal/roles` to `pkg/roles` with optional logger interface - YAML file operations for role management
@@ -98,17 +110,6 @@
 - [ ] Add usage examples in package documentation
 - [ ] Ensure all public APIs have comprehensive unit test coverage
 - [ ] Review public API surface for consistency and Go best practices
-
-#### Step 13: Build System and Integration
-- [ ] Complete Makefile with all targets
-- [ ] Add comprehensive integration tests
-- [ ] Cross-platform build support
-- [ ] Final documentation and security review
-
-#### Step 14: CI/CD Implementation
-- [ ] Implement format, lint, test, and build pipeline for all commits
-- [ ] Add pull request checks and status badges
-- [ ] Implement SLSA compliant release pipeline
 
 ### Notes
 - Each step should be completed with full TDD approach
