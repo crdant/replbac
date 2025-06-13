@@ -145,6 +145,41 @@ func ValidateRole(role models.Role) error {
 	return nil
 }
 
+// ValidateRoleMembers validates that no member appears in multiple roles
+func ValidateRoleMembers(roles []models.Role) error {
+	memberToRoles := make(map[string][]string)
+	
+	for _, role := range roles {
+		// Check for empty member emails within each role
+		memberSet := make(map[string]bool)
+		
+		for _, member := range role.Members {
+			// Check for empty or whitespace-only emails
+			if strings.TrimSpace(member) == "" {
+				return fmt.Errorf("empty member email found in role %s", role.Name)
+			}
+			
+			// Check for duplicates within the same role
+			if memberSet[member] {
+				return fmt.Errorf("member %s appears multiple times in role %s", member, role.Name)
+			}
+			memberSet[member] = true
+			
+			// Track which roles each member appears in
+			memberToRoles[member] = append(memberToRoles[member], role.Name)
+		}
+	}
+	
+	// Check for members appearing in multiple roles
+	for member, roleNames := range memberToRoles {
+		if len(roleNames) > 1 {
+			return fmt.Errorf("member %s appears in multiple roles: %s", member, strings.Join(roleNames, ", "))
+		}
+	}
+	
+	return nil
+}
+
 // WriteRoleFile writes a role to a YAML file
 func WriteRoleFile(role models.Role, filePath string) error {
 	// Ensure directory exists
