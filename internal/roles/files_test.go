@@ -116,6 +116,62 @@ resources:
 			expectError:  true,
 			errorMessage: "not a YAML file",
 		},
+		{
+			name:     "role with members field",
+			fileName: "team-lead.yaml",
+			fileContent: `name: team-lead
+resources:
+  allowed:
+    - "kots/app/*/license/*/read"
+    - "kots/app/*/license/*/write"
+  denied:
+    - "admin/**/*"
+members:
+  - "john@example.com"
+  - "jane@example.com"`,
+			expectedRole: models.Role{
+				Name: "team-lead",
+				Resources: models.Resources{
+					Allowed: []string{"kots/app/*/license/*/read", "kots/app/*/license/*/write"},
+					Denied:  []string{"admin/**/*"},
+				},
+				Members: []string{"john@example.com", "jane@example.com"},
+			},
+		},
+		{
+			name:     "role with empty members field",
+			fileName: "empty-members.yaml",
+			fileContent: `name: empty-members
+resources:
+  allowed:
+    - "kots/app/*/read"
+  denied: []
+members: []`,
+			expectedRole: models.Role{
+				Name: "empty-members",
+				Resources: models.Resources{
+					Allowed: []string{"kots/app/*/read"},
+					Denied:  []string{},
+				},
+				Members: []string{},
+			},
+		},
+		{
+			name:     "role without members field",
+			fileName: "no-members.yaml",
+			fileContent: `name: no-members
+resources:
+  allowed:
+    - "kots/app/*/read"`,
+			expectedRole: models.Role{
+				Name: "no-members",
+				Resources: models.Resources{
+					Allowed: []string{"kots/app/*/read"},
+					Denied:  nil,
+				},
+				Members: nil,
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -411,6 +467,26 @@ func TestValidateRoleFile(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "valid role with members",
+			role: models.Role{
+				Name: "team-lead",
+				Resources: models.Resources{
+					Allowed: []string{"users:read", "users:write"},
+				},
+				Members: []string{"john@example.com", "jane@example.com"},
+			},
+		},
+		{
+			name: "valid role with empty members",
+			role: models.Role{
+				Name: "empty-members",
+				Resources: models.Resources{
+					Allowed: []string{"users:read"},
+				},
+				Members: []string{},
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -447,4 +523,191 @@ func containsSubstring(s, substr string) bool {
 		}
 	}
 	return false
+}
+
+// rolesEqual compares two roles considering nil vs empty slice equivalence
+func rolesEqual(a, b models.Role) bool {
+	if a.ID != b.ID || a.Name != b.Name {
+		return false
+	}
+	
+	if !slicesEqual(a.Resources.Allowed, b.Resources.Allowed) {
+		return false
+	}
+	
+	if !slicesEqual(a.Resources.Denied, b.Resources.Denied) {
+		return false
+	}
+	
+	if !slicesEqual(a.Members, b.Members) {
+		return false
+	}
+	
+	return true
+}
+
+// slicesEqual compares two string slices treating nil and empty as equal
+func slicesEqual(a, b []string) bool {
+	if len(a) == 0 && len(b) == 0 {
+		return true
+	}
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func TestWriteRoleFile_WithMembers(t *testing.T) {
+	tmpDir := t.TempDir()
+	
+	tests := []struct {
+		name     string
+		role     models.Role
+		fileName string
+	}{
+		{
+			name: "role with members",
+			role: models.Role{
+				Name: "team-lead",
+				Resources: models.Resources{
+					Allowed: []string{"kots/app/*/read", "kots/app/*/write"},
+					Denied:  []string{"admin/**/*"},
+				},
+				Members: []string{"john@example.com", "jane@example.com"},
+			},
+			fileName: "team-lead.yaml",
+		},
+		{
+			name: "role with empty members",
+			role: models.Role{
+				Name: "no-members",
+				Resources: models.Resources{
+					Allowed: []string{"kots/app/*/read"},
+				},
+				Members: []string{},
+			},
+			fileName: "no-members.yaml",
+		},
+		{
+			name: "role without members field",
+			role: models.Role{
+				Name: "simple",
+				Resources: models.Resources{
+					Allowed: []string{"kots/app/*/read"},
+				},
+				Members: []string{},
+			},
+			fileName: "simple.yaml",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			filePath := filepath.Join(tmpDir, tt.fileName)
+			
+			// Write the role file
+			err := WriteRoleFile(tt.role, filePath)
+			if err != nil {
+				t.Fatalf("Failed to write role file: %v", err)
+			}
+
+			// Read it back and verify
+			readRole, err := ReadRoleFile(filePath)
+			if err != nil {
+				t.Fatalf("Failed to read role file: %v", err)
+			}
+
+			if !rolesEqual(readRole, tt.role) {
+				t.Errorf("Read role = %+v, want %+v", readRole, tt.role)
+			}
+		})
+	}
+}
+
+func TestGenerateRoleYAML_WithMembers(t *testing.T) {
+	tests := []struct {
+		name            string
+		role            models.Role
+		expectMembers   bool
+		expectedContent []string
+	}{
+		{
+			name: "role with members",
+			role: models.Role{
+				Name: "team-lead",
+				Resources: models.Resources{
+					Allowed: []string{"kots/app/*/read"},
+				},
+				Members: []string{"john@example.com", "jane@example.com"},
+			},
+			expectMembers: true,
+			expectedContent: []string{
+				"name: team-lead",
+				"members:",
+				"- john@example.com",
+				"- jane@example.com",
+			},
+		},
+		{
+			name: "role with empty members",
+			role: models.Role{
+				Name: "empty-members",
+				Resources: models.Resources{
+					Allowed: []string{"kots/app/*/read"},
+				},
+				Members: []string{},
+			},
+			expectMembers: false,
+			expectedContent: []string{
+				"name: empty-members",
+				"allowed:",
+				"- kots/app/*/read",
+			},
+		},
+		{
+			name: "role without members field",
+			role: models.Role{
+				Name: "no-members",
+				Resources: models.Resources{
+					Allowed: []string{"kots/app/*/read"},
+				},
+			},
+			expectMembers: false,
+			expectedContent: []string{
+				"name: no-members",
+				"allowed:",
+				"- kots/app/*/read",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			yaml, err := GenerateRoleYAML(tt.role)
+			if err != nil {
+				t.Fatalf("Failed to generate YAML: %v", err)
+			}
+
+			// Check for expected content
+			for _, content := range tt.expectedContent {
+				if !containsSubstring(yaml, content) {
+					t.Errorf("Expected YAML to contain %q, got:\n%s", content, yaml)
+				}
+			}
+
+			// Check if members field is present when expected
+			hasMembersField := containsSubstring(yaml, "members:")
+			if tt.expectMembers && !hasMembersField {
+				t.Errorf("Expected YAML to contain members field, got:\n%s", yaml)
+			}
+			if !tt.expectMembers && hasMembersField {
+				t.Errorf("Expected YAML to not contain members field, got:\n%s", yaml)
+			}
+		})
+	}
 }
