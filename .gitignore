@@ -44,8 +44,8 @@ Thumbs.db
 # Compiled binaries in root (should be in bin/ instead)
 /replbac
 
-# Test files and directories in root
-test_*.go
+# No source code in root
+/*.go
 /test-*/
 
 # Policy files (may contain sensitive data)
