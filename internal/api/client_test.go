@@ -148,18 +148,25 @@ func TestGetRoles(t *testing.T) {
 				if r.Method != http.MethodGet {
 					t.Errorf("Expected GET request, got %s", r.Method)
 				}
-				if r.URL.Path != "/vendor/v3/policies" {
-					t.Errorf("Expected path /vendor/v3/policies, got %s", r.URL.Path)
+				
+				// Handle both endpoints now that GetRoles calls both
+				switch r.URL.Path {
+				case "/vendor/v3/policies":
+					// Verify authorization header
+					authHeader := r.Header.Get("Authorization")
+					if authHeader != "test-token" {
+						t.Errorf("Expected Authorization header 'test-token', got '%s'", authHeader)
+					}
+					w.WriteHeader(tt.mockStatusCode)
+					w.Write([]byte(tt.mockResponse))
+				case "/v1/team/members":
+					// Return empty members list for simplicity
+					w.WriteHeader(http.StatusOK)
+					w.Write([]byte("[]"))
+				default:
+					t.Errorf("Unexpected path: %s", r.URL.Path)
+					w.WriteHeader(http.StatusNotFound)
 				}
-
-				// Verify authorization header
-				authHeader := r.Header.Get("Authorization")
-				if authHeader != "test-token" {
-					t.Errorf("Expected Authorization header 'test-token', got '%s'", authHeader)
-				}
-
-				w.WriteHeader(tt.mockStatusCode)
-				w.Write([]byte(tt.mockResponse))
 			}))
 			defer server.Close()
 
@@ -560,22 +567,20 @@ func TestGetTeamMembers(t *testing.T) {
 		{
 			name:           "successful get team members",
 			mockStatusCode: http.StatusOK,
-			mockResponse: `{
-				"members": [
-					{
-						"id": "member1",
-						"email": "john@example.com",
-						"name": "John Doe",
-						"username": "john"
-					},
-					{
-						"id": "member2", 
-						"email": "jane@example.com",
-						"name": "Jane Smith",
-						"username": "jane"
-					}
-				]
-			}`,
+			mockResponse: `[
+				{
+					"id": "member1",
+					"email": "john@example.com",
+					"name": "John Doe",
+					"username": "john"
+				},
+				{
+					"id": "member2", 
+					"email": "jane@example.com",
+					"name": "Jane Smith",
+					"username": "jane"
+				}
+			]`,
 			expectedMembers: []models.TeamMember{
 				{
 					ID:       "member1",
@@ -594,7 +599,7 @@ func TestGetTeamMembers(t *testing.T) {
 		{
 			name:           "empty team members list",
 			mockStatusCode: http.StatusOK,
-			mockResponse:   `{"members": []}`,
+			mockResponse:   `[]`,
 			expectedMembers: []models.TeamMember{},
 		},
 		{
@@ -611,8 +616,8 @@ func TestGetTeamMembers(t *testing.T) {
 				if r.Method != http.MethodGet {
 					t.Errorf("Expected GET request, got %s", r.Method)
 				}
-				if r.URL.Path != "/vendor/v3/team/members" {
-					t.Errorf("Expected path /vendor/v3/team/members, got %s", r.URL.Path)
+				if r.URL.Path != "/v1/team/members" {
+					t.Errorf("Expected path /v1/team/members, got %s", r.URL.Path)
 				}
 
 				w.WriteHeader(tt.mockStatusCode)

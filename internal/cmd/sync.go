@@ -264,18 +264,36 @@ func RunSyncCommandWithLogging(cmd *cobra.Command, args []string, client api.Cli
 	}
 
 	// Execute sync plan with timing
-	executor := sync.NewExecutor(client, logger)
 	var result sync.ExecutionResult
-
+	
 	err = logger.TimedOperation("sync execution", func() error {
-		if dryRun {
-			if diff {
-				result = executor.ExecutePlanDryRunWithDiffs(plan)
+		// Check if any roles have members to determine which executor to use
+		hasMembers := rolesHaveMembers(localRoles)
+		
+		if hasMembers {
+			logger.Debug("roles contain members - using ExecutorWithMembers")
+			executor := sync.NewExecutorWithMembers(client.(sync.APIClientWithMembers), logger)
+			if dryRun {
+				if diff {
+					result = executor.ExecutePlanDryRunWithDiffs(plan)
+				} else {
+					result = executor.ExecutePlanDryRun(plan)
+				}
 			} else {
-				result = executor.ExecutePlanDryRun(plan)
+				result = executor.ExecutePlan(plan)
 			}
 		} else {
-			result = executor.ExecutePlan(plan)
+			logger.Debug("roles contain no members - using standard Executor")
+			executor := sync.NewExecutor(client, logger)
+			if dryRun {
+				if diff {
+					result = executor.ExecutePlanDryRunWithDiffs(plan)
+				} else {
+					result = executor.ExecutePlanDryRun(plan)
+				}
+			} else {
+				result = executor.ExecutePlan(plan)
+			}
 		}
 		return result.Error
 	})
@@ -414,13 +432,27 @@ func RunSyncCommandWithClient(cmd *cobra.Command, args []string, client api.Clie
 	}
 	
 	// Execute sync plan
-	executor := sync.NewExecutor(client, logger)
 	var result sync.ExecutionResult
 	
-	if dryRun {
-		result = executor.ExecutePlanDryRun(plan)
+	// Check if any roles have members to determine which executor to use
+	hasMembers := rolesHaveMembers(localRoles)
+	
+	if hasMembers {
+		logger.Debug("roles contain members - using ExecutorWithMembers")
+		executor := sync.NewExecutorWithMembers(client.(sync.APIClientWithMembers), logger)
+		if dryRun {
+			result = executor.ExecutePlanDryRun(plan)
+		} else {
+			result = executor.ExecutePlan(plan)
+		}
 	} else {
-		result = executor.ExecutePlan(plan)
+		logger.Debug("roles contain no members - using standard Executor")
+		executor := sync.NewExecutor(client, logger)
+		if dryRun {
+			result = executor.ExecutePlanDryRun(plan)
+		} else {
+			result = executor.ExecutePlan(plan)
+		}
 	}
 	
 	// Handle execution result
@@ -438,4 +470,14 @@ func RunSyncCommandWithClient(cmd *cobra.Command, args []string, client api.Clie
 	cmd.Printf("\nSync completed: %s\n", result.Summary())
 	
 	return nil
+}
+
+// rolesHaveMembers checks if any of the provided roles have member assignments
+func rolesHaveMembers(roles []models.Role) bool {
+	for _, role := range roles {
+		if len(role.Members) > 0 {
+			return true
+		}
+	}
+	return false
 }
