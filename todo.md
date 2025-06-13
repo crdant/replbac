@@ -73,7 +73,7 @@
 - [x] Add man page
 
 #### Step 11: Add membership
-- [ ] Add `members` field to Role model in `internal/models/models.go`
+- [x] Add `members` field to Role model in `internal/models/models.go`
 - [ ] Update YAML parsing and validation in `internal/roles/files.go` to handle members field
 - [ ] Add team member data structures (Member, TeamMember) to models
 - [ ] Implement GET team members API call in `internal/api/client.go`
