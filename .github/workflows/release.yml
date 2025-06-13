@@ -126,7 +126,7 @@ jobs:
         GOARCH: ${{ matrix.arch }}
       run: |
         mkdir -p dist
-        go build -o dist/$${{ matrix.os }}/${{ matrix.arch }}/replbac ${{ matrix.os == 'windows' && '.exe' || '' }} ./cmd/replbac
+        go build -o dist/$${{ matrix.os }}/${{ matrix.arch }}/replbac${{ matrix.os == 'windows' && '.exe' || '' }} ./cmd/replbac
 
     - name: Test binary
       if: matrix.os == 'linux' && matrix.arch == 'amd64'
@@ -136,21 +136,20 @@ jobs:
 
     - name: Create archives
       run:
+          bin_dir=dist/${{ matrix.os }}/${{ matrix.arch }}
           workspace=$(pwd)
           output_name=replbac-${{ steps.version.outputs.version }}-${{ matrix.os }}-${{ matrix.arch }}
           if [ "$os" != "windows" ]; then
-            cd dist/${os}/${arch}
-            tar -czf "${output_name}.tar.gz" "${output_name}"
-            rm replbac
+            cd ${bin_dir}
+            tar -czf "dist/${output_name}.tar.gz" replbac
+            rm -rf ${bin_dir}
             cd ${workspace} 
           else
-            cd dist
-            tar -czf "${output_name}.tar.gz" "${output_name}"
-            zip "${output_name%.exe}.zip" "${output_name}"
-            rm replbac.exe
+            cd ${bin_dir}
+            zip "${output_name%.exe}.zip" replbac.exe
+            rm -rf ${bin_dir}
             cd ${workspace} 
           fi
-        done
 
     - name: Generate checksums and digests
       id: hash
