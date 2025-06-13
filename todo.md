@@ -81,7 +81,7 @@
 - [x] Add member validation logic to ensure users only appear in one role at a time
 - [x] Update sync comparison logic in `internal/sync/compare.go` to handle member assignments
 - [x] Add member assignment execution to `internal/sync/executor.go`
-- [ ] Update CLI commands to support member sync operations
+- [x] Update CLI commands to support member sync operations
 - [ ] Add comprehensive tests for member management functionality
 - [ ] Update documentation and examples to show members field usage
 
