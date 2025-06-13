@@ -79,7 +79,7 @@
 - [x] Implement GET team members API call in `internal/api/client.go`
 - [x] Implement PUT team member role assignment API call in `internal/api/client.go`
 - [x] Add member validation logic to ensure users only appear in one role at a time
-- [ ] Update sync comparison logic in `internal/sync/compare.go` to handle member assignments
+- [x] Update sync comparison logic in `internal/sync/compare.go` to handle member assignments
 - [ ] Add member assignment execution to `internal/sync/executor.go`
 - [ ] Update CLI commands to support member sync operations
 - [ ] Add comprehensive tests for member management functionality
