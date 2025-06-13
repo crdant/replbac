@@ -166,3 +166,118 @@ func TestConfig_YAMLMarshaling(t *testing.T) {
 		t.Errorf("Expected log level %s, got %s", config.LogLevel, unmarshaledConfig.LogLevel)
 	}
 }
+
+func TestRole_WithMembers_YAMLMarshaling(t *testing.T) {
+	role := Role{
+		Name: "Team Lead",
+		Resources: Resources{
+			Allowed: []string{
+				"kots/app/*/license/*/read",
+				"kots/app/*/license/*/write",
+			},
+			Denied: []string{
+				"admin/**/*",
+			},
+		},
+		Members: []string{
+			"john@example.com",
+			"jane@example.com",
+		},
+	}
+
+	// Test marshaling to YAML
+	yamlData, err := yaml.Marshal(role)
+	if err != nil {
+		t.Fatalf("Failed to marshal role with members to YAML: %v", err)
+	}
+
+	// Test unmarshaling from YAML
+	var unmarshaledRole Role
+	err = yaml.Unmarshal(yamlData, &unmarshaledRole)
+	if err != nil {
+		t.Fatalf("Failed to unmarshal role with members from YAML: %v", err)
+	}
+
+	// Verify the data is preserved
+	if unmarshaledRole.Name != role.Name {
+		t.Errorf("Expected name %s, got %s", role.Name, unmarshaledRole.Name)
+	}
+	if len(unmarshaledRole.Members) != len(role.Members) {
+		t.Errorf("Expected %d members, got %d", len(role.Members), len(unmarshaledRole.Members))
+	}
+	for i, member := range role.Members {
+		if unmarshaledRole.Members[i] != member {
+			t.Errorf("Expected member %s, got %s", member, unmarshaledRole.Members[i])
+		}
+	}
+}
+
+func TestRole_WithEmptyMembers_YAMLMarshaling(t *testing.T) {
+	role := Role{
+		Name: "Basic Role",
+		Resources: Resources{
+			Allowed: []string{"read"},
+			Denied:  []string{},
+		},
+		Members: []string{},
+	}
+
+	// Test marshaling to YAML
+	yamlData, err := yaml.Marshal(role)
+	if err != nil {
+		t.Fatalf("Failed to marshal role with empty members to YAML: %v", err)
+	}
+
+	// Test unmarshaling from YAML
+	var unmarshaledRole Role
+	err = yaml.Unmarshal(yamlData, &unmarshaledRole)
+	if err != nil {
+		t.Fatalf("Failed to unmarshal role with empty members from YAML: %v", err)
+	}
+
+	// Verify empty members list is preserved
+	if len(unmarshaledRole.Members) != 0 {
+		t.Errorf("Expected 0 members, got %d", len(unmarshaledRole.Members))
+	}
+}
+
+func TestRole_WithMembers_JSONMarshaling(t *testing.T) {
+	role := Role{
+		Name: "Manager",
+		Resources: Resources{
+			Allowed: []string{"manage/*"},
+			Denied:  []string{},
+		},
+		Members: []string{
+			"manager1@example.com",
+			"manager2@example.com",
+		},
+	}
+
+	apiRole := role.ToAPIRole()
+
+	// Test marshaling to JSON
+	jsonData, err := json.Marshal(apiRole)
+	if err != nil {
+		t.Fatalf("Failed to marshal APIRole with members to JSON: %v", err)
+	}
+
+	// Test unmarshaling from JSON
+	var unmarshaledAPIRole APIRole
+	err = json.Unmarshal(jsonData, &unmarshaledAPIRole)
+	if err != nil {
+		t.Fatalf("Failed to unmarshal APIRole with members from JSON: %v", err)
+	}
+
+	unmarshaledRole := unmarshaledAPIRole.ToRole()
+
+	// Verify members are preserved through API conversion
+	if len(unmarshaledRole.Members) != len(role.Members) {
+		t.Errorf("Expected %d members, got %d", len(role.Members), len(unmarshaledRole.Members))
+	}
+	for i, member := range role.Members {
+		if unmarshaledRole.Members[i] != member {
+			t.Errorf("Expected member %s, got %s", member, unmarshaledRole.Members[i])
+		}
+	}
+}
