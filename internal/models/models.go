@@ -67,6 +67,14 @@ func (p Policy) ToRole() (Role, error) {
 	return role, nil
 }
 
+// TeamMember represents a team member from the Replicated API
+type TeamMember struct {
+	ID       string `json:"id"`
+	Email    string `json:"email"`
+	Name     string `json:"name,omitempty"`
+	Username string `json:"username,omitempty"`
+}
+
 // Config represents the application configuration
 type Config struct {
 	APIToken string `yaml:"api_token" json:"api_token"`

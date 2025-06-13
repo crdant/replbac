@@ -548,3 +548,179 @@ func TestGetRole(t *testing.T) {
 		})
 	}
 }
+
+func TestGetTeamMembers(t *testing.T) {
+	tests := []struct {
+		name            string
+		mockStatusCode  int
+		mockResponse    string
+		expectedMembers []models.TeamMember
+		expectError     bool
+	}{
+		{
+			name:           "successful get team members",
+			mockStatusCode: http.StatusOK,
+			mockResponse: `{
+				"members": [
+					{
+						"id": "member1",
+						"email": "john@example.com",
+						"name": "John Doe",
+						"username": "john"
+					},
+					{
+						"id": "member2", 
+						"email": "jane@example.com",
+						"name": "Jane Smith",
+						"username": "jane"
+					}
+				]
+			}`,
+			expectedMembers: []models.TeamMember{
+				{
+					ID:       "member1",
+					Email:    "john@example.com",
+					Name:     "John Doe",
+					Username: "john",
+				},
+				{
+					ID:       "member2",
+					Email:    "jane@example.com",
+					Name:     "Jane Smith",
+					Username: "jane",
+				},
+			},
+		},
+		{
+			name:           "empty team members list",
+			mockStatusCode: http.StatusOK,
+			mockResponse:   `{"members": []}`,
+			expectedMembers: []models.TeamMember{},
+		},
+		{
+			name:           "API error",
+			mockStatusCode: http.StatusInternalServerError,
+			mockResponse:   `{"error": "internal server error"}`,
+			expectError:    true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Method != http.MethodGet {
+					t.Errorf("Expected GET request, got %s", r.Method)
+				}
+				if r.URL.Path != "/vendor/v3/team/members" {
+					t.Errorf("Expected path /vendor/v3/team/members, got %s", r.URL.Path)
+				}
+
+				w.WriteHeader(tt.mockStatusCode)
+				w.Write([]byte(tt.mockResponse))
+			}))
+			defer server.Close()
+
+			client, err := NewClient(server.URL, "test-token", createTestLogger())
+			if err != nil {
+				t.Fatalf("Failed to create client: %v", err)
+			}
+
+			members, err := client.GetTeamMembers()
+
+			if tt.expectError {
+				if err == nil {
+					t.Errorf("Expected error but got none")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("Unexpected error: %v", err)
+				return
+			}
+
+			if !reflect.DeepEqual(members, tt.expectedMembers) {
+				t.Errorf("Expected members %+v, got %+v", tt.expectedMembers, members)
+			}
+		})
+	}
+}
+
+func TestAssignMemberRole(t *testing.T) {
+	tests := []struct {
+		name           string
+		memberEmail    string
+		roleID         string
+		mockStatusCode int
+		mockResponse   string
+		expectError    bool
+	}{
+		{
+			name:           "successful role assignment",
+			memberEmail:    "john@example.com",
+			roleID:         "role123",
+			mockStatusCode: http.StatusOK,
+			mockResponse:   `{"success": true}`,
+		},
+		{
+			name:           "member not found",
+			memberEmail:    "nonexistent@example.com",
+			roleID:         "role123",
+			mockStatusCode: http.StatusNotFound,
+			mockResponse:   `{"error": "member not found"}`,
+			expectError:    true,
+		},
+		{
+			name:           "role not found",
+			memberEmail:    "john@example.com",
+			roleID:         "nonexistent-role",
+			mockStatusCode: http.StatusNotFound,
+			mockResponse:   `{"error": "role not found"}`,
+			expectError:    true,
+		},
+		{
+			name:           "invalid request",
+			memberEmail:    "",
+			roleID:         "role123",
+			mockStatusCode: http.StatusBadRequest,
+			mockResponse:   `{"error": "invalid request"}`,
+			expectError:    true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Method != http.MethodPut {
+					t.Errorf("Expected PUT request, got %s", r.Method)
+				}
+				expectedPath := "/vendor/v3/team/member/" + tt.memberEmail + "/role/" + tt.roleID
+				if r.URL.Path != expectedPath {
+					t.Errorf("Expected path %s, got %s", expectedPath, r.URL.Path)
+				}
+
+				w.WriteHeader(tt.mockStatusCode)
+				w.Write([]byte(tt.mockResponse))
+			}))
+			defer server.Close()
+
+			client, err := NewClient(server.URL, "test-token", createTestLogger())
+			if err != nil {
+				t.Fatalf("Failed to create client: %v", err)
+			}
+
+			err = client.AssignMemberRole(tt.memberEmail, tt.roleID)
+
+			if tt.expectError {
+				if err == nil {
+					t.Errorf("Expected error but got none")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("Unexpected error: %v", err)
+			}
+		})
+	}
+}
