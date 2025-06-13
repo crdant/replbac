@@ -1,9 +1,0 @@
-# WARNING: The 'id' field is managed by the Replicated API and should not be modified manually.
-# Changing the ID will cause sync operations to fail.
-
-id: 11cb3fd9636849444674497685c71651
-name: test-role
-resources:
-    allowed:
-        - read
-    denied: []
