@@ -126,13 +126,13 @@ jobs:
         GOARCH: ${{ matrix.arch }}
       run: |
         mkdir -p dist
-        go build -o bin/$${{ matrix.os }}/${{ matrix.arch }}/replbac ${{ matrix.os == 'windows' && '.exe' || '' }} ./cmd/replbac
+        go build -o dist/$${{ matrix.os }}/${{ matrix.arch }}/replbac ${{ matrix.os == 'windows' && '.exe' || '' }} ./cmd/replbac
 
     - name: Test binary
       if: matrix.os == 'linux' && matrix.arch == 'amd64'
       run: |
-        chmod +x bin/linux/amd64/replbac
-        ./bin/linux/amd64/replbac version
+        chmod +x dist/linux/amd64/replbac
+        ./dist/linux/amd64/replbac version
 
     - name: Create archives
       run:
