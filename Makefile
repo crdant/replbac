@@ -1,9 +1,11 @@
-.PHONY: build test clean lint install help
+.PHONY: build test clean lint install man install-man help
 
 # Build variables
 BINARY_NAME=replbac
 BUILD_DIR=bin
 CMD_DIR=cmd/replbac
+MAN_DIR=man
+MAN_FILE=$(MAN_DIR)/$(BINARY_NAME).1
 
 # Default target
 help: ## Show this help message
@@ -34,5 +36,17 @@ lint: ## Run linter
 install: build ## Install binary locally
 	@echo "Installing $(BINARY_NAME)..."
 	@cp $(BUILD_DIR)/$(BINARY_NAME) $(GOPATH)/bin/$(BINARY_NAME)
+
+man: ## Generate man page
+	@echo "Generating man page..."
+	@mkdir -p $(MAN_DIR)
+	@go run cmd/gen-man/main.go --output $(MAN_FILE)
+	@echo "Man page generated at $(MAN_FILE)"
+
+install-man: man ## Install man page to system
+	@echo "Installing man page..."
+	@sudo mkdir -p /usr/local/share/man/man1
+	@sudo cp $(MAN_FILE) /usr/local/share/man/man1/
+	@echo "Man page installed to /usr/local/share/man/man1/"
 
 .DEFAULT_GOAL := help

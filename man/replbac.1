@@ -1,0 +1,139 @@
+.TH REPLBAC 1 "June 2025" "replbac dev" "User Commands"
+.SH NAME
+replbac \- Replicated RBAC Synchronization Tool
+.SH SYNOPSIS
+.B replbac
+[\fIOPTIONS\fR] \fICOMMAND\fR [\fIARGS\fR...]
+.SH DESCRIPTION
+\fBreplbac\fR is a command-line tool for synchronizing Role-Based Access Control (RBAC)
+configurations between local YAML files and the Replicated Vendor Portal API.
+It allows you to manage team permissions as code, providing version control
+and automated deployment of role definitions.
+.PP
+Key features include bidirectional synchronization, dry-run mode for previewing
+changes, flexible configuration options, and comprehensive error handling.
+.SH COMMANDS
+.TP
+\fBsync\fR [\fIdirectory\fR]
+Synchronize local role files to Replicated API. Reads role definitions from
+local YAML files and synchronizes them with the Replicated platform.
+.TP
+\fBpull\fR [\fIdirectory\fR]
+Pull role definitions from Replicated API to local files. Downloads existing
+role definitions and creates local YAML files.
+.TP
+\fBversion\fR
+Print version information including build details.
+.SH OPTIONS
+.SS Global Options
+.TP
+\fB--api-token\fR \fITOKEN\fR
+Replicated API token for authentication.
+.TP
+\fB--config\fR \fIFILE\fR
+Path to configuration file.
+.TP
+\fB--confirm\fR
+Automatically confirm destructive operations.
+.TP
+\fB--log-level\fR \fILEVEL\fR
+Set log level: debug, info, warn, error.
+.SS Sync Command Options
+.TP
+\fB--dry-run\fR
+Preview changes without applying them.
+.TP
+\fB--diff\fR
+Preview changes with detailed diffs (implies --dry-run).
+.TP
+\fB--delete\fR
+Delete remote roles not present in local files.
+.TP
+\fB--force\fR
+Skip confirmation prompts (requires --delete).
+.TP
+\fB--verbose\fR
+Enable info-level logging to stderr.
+.TP
+\fB--debug\fR
+Enable debug-level logging to stderr.
+.SS Pull Command Options
+.TP
+\fB--force\fR
+Overwrite existing files.
+.TP
+\fB--dry-run\fR
+Preview changes without applying them.
+.TP
+\fB--diff\fR
+Preview changes with detailed diffs.
+.SH ENVIRONMENT
+Configuration can be provided via environment variables as an alternative to CLI flags:
+.TP
+\fBREPLICATED_API_TOKEN\fR
+Replicated API token (for replicated CLI compatibility).
+.TP
+\fBREPLBAC_API_TOKEN\fR
+Replicated API token (alternative to REPLICATED_API_TOKEN).
+.TP
+\fBREPLBAC_CONFIG\fR
+Path to configuration file.
+.TP
+\fBREPLBAC_CONFIRM\fR
+Automatically confirm operations (true/false).
+.TP
+\fBREPLBAC_LOG_LEVEL\fR
+Log level (debug, info, warn, error).
+.PP
+Environment variables have lower precedence than CLI flags but higher than config files.
+.SH FILES
+.TP
+\fI~/.config/replbac/config.yaml\fR
+User configuration file (Linux).
+.TP
+\fI~/Library/Preferences/com.replicated.replbac/config.yaml\fR
+User configuration file (macOS).
+.TP
+\fI~/.replbac/config.yaml\fR
+User configuration file (Windows and fallback).
+.TP
+\fI*.yaml, *.yml\fR
+Role definition files in YAML format.
+.SH EXAMPLES
+.PP
+Synchronize roles from current directory:
+.RS
+\fBreplbac sync\fR
+.RE
+.PP
+Preview sync changes without applying:
+.RS
+\fBreplbac sync --dry-run\fR
+.RE
+.PP
+Sync with detailed diff output:
+.RS
+\fBreplbac sync --diff\fR
+.RE
+.PP
+Sync and delete remote roles not in local files:
+.RS
+\fBreplbac sync --delete\fR
+.RE
+.PP
+Pull roles from API to local files:
+.RS
+\fBreplbac pull ./roles\fR
+.RE
+.PP
+Preview pull operation:
+.RS
+\fBreplbac pull --dry-run\fR
+.RE
+.SH SEE ALSO
+\fByaml\fR(1), \fBcurl\fR(1)
+.PP
+Replicated Vendor Portal documentation:
+https://docs.replicated.com/vendor/
+.SH AUTHOR
+Charles Dant <crdant@replicated.com>
