@@ -786,3 +786,250 @@ func findInString(s, substr string) bool {
 	}
 	return false
 }
+
+func TestExecutor_ExecutePlanWithMembers(t *testing.T) {
+	tests := []struct {
+		name           string
+		plan           SyncPlan
+		wantCreated    int
+		wantUpdated    int
+		wantDeleted    int
+		expectError    bool
+		expectedMembers map[string][]string  // roleName -> members that should be assigned
+	}{
+		{
+			name: "create role with members",
+			plan: SyncPlan{
+				Creates: []models.Role{
+					{
+						Name: "admin",
+						Resources: models.Resources{
+							Allowed: []string{"*"},
+							Denied:  []string{},
+						},
+						Members: []string{"john@example.com", "jane@example.com"},
+					},
+				},
+				Updates: []RoleUpdate{},
+				Deletes: []string{},
+			},
+			wantCreated: 1,
+			wantUpdated: 0,
+			wantDeleted: 0,
+			expectError: false,
+			expectedMembers: map[string][]string{
+				"admin": {"john@example.com", "jane@example.com"},
+			},
+		},
+		{
+			name: "update role with member changes",
+			plan: SyncPlan{
+				Creates: []models.Role{},
+				Updates: []RoleUpdate{
+					{
+						Name: "viewer",
+						Local: models.Role{
+							Name: "viewer",
+							Resources: models.Resources{
+								Allowed: []string{"read"},
+								Denied:  []string{},
+							},
+							Members: []string{"alice@example.com", "bob@example.com"},
+						},
+						Remote: models.Role{
+							Name: "viewer",
+							Resources: models.Resources{
+								Allowed: []string{"read"},
+								Denied:  []string{},
+							},
+							Members: []string{"charlie@example.com"},
+						},
+					},
+				},
+				Deletes: []string{},
+			},
+			wantCreated: 0,
+			wantUpdated: 1,
+			wantDeleted: 0,
+			expectError: false,
+			expectedMembers: map[string][]string{
+				"viewer": {"alice@example.com", "bob@example.com"},
+			},
+		},
+		{
+			name: "member assignment fails",
+			plan: SyncPlan{
+				Creates: []models.Role{
+					{
+						Name: "admin",
+						Resources: models.Resources{
+							Allowed: []string{"*"},
+							Denied:  []string{},
+						},
+						Members: []string{"invalid@example.com"},
+					},
+				},
+				Updates: []RoleUpdate{},
+				Deletes: []string{},
+			},
+			wantCreated: 1,
+			wantUpdated: 0,
+			wantDeleted: 0,
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockClient := &MockAPIClientWithMembers{
+				MockAPIClient: MockAPIClient{},
+				AssignMemberRoleFunc: func(memberEmail, roleID string) error {
+					if memberEmail == "invalid@example.com" {
+						return errors.New("member not found")
+					}
+					return nil
+				},
+				GetTeamMembersFunc: func() ([]models.TeamMember, error) {
+					return []models.TeamMember{
+						{ID: "1", Email: "john@example.com"},
+						{ID: "2", Email: "jane@example.com"},
+						{ID: "3", Email: "alice@example.com"},
+						{ID: "4", Email: "bob@example.com"},
+						{ID: "5", Email: "charlie@example.com"},
+					}, nil
+				},
+			}
+
+			executor := NewExecutorWithMembers(mockClient, createTestLogger())
+			result := executor.ExecutePlan(tt.plan)
+
+			// Check basic execution results
+			if result.Created != tt.wantCreated {
+				t.Errorf("ExecutePlan() Created = %v, want %v", result.Created, tt.wantCreated)
+			}
+			if result.Updated != tt.wantUpdated {
+				t.Errorf("ExecutePlan() Updated = %v, want %v", result.Updated, tt.wantUpdated)
+			}
+			if result.Deleted != tt.wantDeleted {
+				t.Errorf("ExecutePlan() Deleted = %v, want %v", result.Deleted, tt.wantDeleted)
+			}
+
+			// Check error expectation
+			if tt.expectError && result.Error == nil {
+				t.Errorf("Expected error but got none")
+			}
+			if !tt.expectError && result.Error != nil {
+				t.Errorf("Unexpected error: %v", result.Error)
+			}
+
+			// Check member assignments if no error expected
+			if !tt.expectError && tt.expectedMembers != nil {
+				for roleName, expectedMembers := range tt.expectedMembers {
+					actualMembers := mockClient.AssignedMembers[roleName]
+					if len(actualMembers) != len(expectedMembers) {
+						t.Errorf("Role %s: expected %d members, got %d", roleName, len(expectedMembers), len(actualMembers))
+						continue
+					}
+					for _, expectedMember := range expectedMembers {
+						found := false
+						for _, actualMember := range actualMembers {
+							if actualMember == expectedMember {
+								found = true
+								break
+							}
+						}
+						if !found {
+							t.Errorf("Role %s: expected member %s not found in assignments", roleName, expectedMember)
+						}
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestExecutePlanDryRunWithDiffs_Members(t *testing.T) {
+	plan := SyncPlan{
+		Creates: []models.Role{},
+		Updates: []RoleUpdate{
+			{
+				Name: "admin",
+				Local: models.Role{
+					Name: "admin",
+					Resources: models.Resources{
+						Allowed: []string{"*"},
+						Denied:  []string{},
+					},
+					Members: []string{"john@example.com", "jane@example.com"},
+				},
+				Remote: models.Role{
+					Name: "admin",
+					Resources: models.Resources{
+						Allowed: []string{"*"},
+						Denied:  []string{},
+					},
+					Members: []string{"bob@example.com"},
+				},
+			},
+		},
+		Deletes: []string{},
+	}
+
+	mockClient := &MockAPIClientWithMembers{
+		MockAPIClient: MockAPIClient{},
+	}
+	executor := NewExecutorWithMembers(mockClient, createTestLogger())
+	result := executor.ExecutePlanDryRunWithDiffs(plan)
+
+	if result.Error != nil {
+		t.Errorf("Unexpected error: %v", result.Error)
+	}
+
+	// Check that detailed info includes member changes
+	if result.DetailedInfo == "" {
+		t.Error("Expected detailed info but got empty string")
+	}
+
+	// Should contain member diff information
+	expectedStrings := []string{
+		"UPDATE: admin",
+		"+ members: john@example.com",
+		"+ members: jane@example.com",
+		"- members: bob@example.com",
+	}
+
+	for _, expected := range expectedStrings {
+		if !findInString(result.DetailedInfo, expected) {
+			t.Errorf("Expected to find %q in detailed info: %s", expected, result.DetailedInfo)
+		}
+	}
+}
+
+// MockAPIClientWithMembers extends MockAPIClient with member operations
+type MockAPIClientWithMembers struct {
+	MockAPIClient
+	GetTeamMembersFunc   func() ([]models.TeamMember, error)
+	AssignMemberRoleFunc func(memberEmail, roleID string) error
+	
+	// Track member assignments for verification
+	AssignedMembers map[string][]string // roleName -> list of member emails
+}
+
+func (m *MockAPIClientWithMembers) GetTeamMembers() ([]models.TeamMember, error) {
+	if m.GetTeamMembersFunc != nil {
+		return m.GetTeamMembersFunc()
+	}
+	return []models.TeamMember{}, nil
+}
+
+func (m *MockAPIClientWithMembers) AssignMemberRole(memberEmail, roleID string) error {
+	if m.AssignedMembers == nil {
+		m.AssignedMembers = make(map[string][]string)
+	}
+	m.AssignedMembers[roleID] = append(m.AssignedMembers[roleID], memberEmail)
+	
+	if m.AssignMemberRoleFunc != nil {
+		return m.AssignMemberRoleFunc(memberEmail, roleID)
+	}
+	return nil
+}
