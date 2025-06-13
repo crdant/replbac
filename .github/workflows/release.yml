@@ -141,7 +141,7 @@ jobs:
           workspace=$(pwd)
           output_name=replbac-${{ steps.version.outputs.version }}-${{ matrix.os }}-${{ matrix.arch }}
 
-          if [[ "$os" != "windows" ]]; then
+          if [[ ! "$os" == "windows" ]]; then
             cd ${bin_dir}
             tar -czf "dist/${output_name}.tar.gz" replbac
             rm -rf ${bin_dir}
