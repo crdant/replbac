@@ -71,7 +71,7 @@ func CompareRoles(local, remote []models.Role) (SyncPlan, error) {
 	return plan, nil
 }
 
-// RolesEqual compares two roles for equality, ignoring order of resources
+// RolesEqual compares two roles for equality, ignoring order of resources and members
 func RolesEqual(r1, r2 models.Role) bool {
 	// Compare names
 	if r1.Name != r2.Name {
@@ -79,7 +79,12 @@ func RolesEqual(r1, r2 models.Role) bool {
 	}
 
 	// Compare resources
-	return ResourcesEqual(r1.Resources, r2.Resources)
+	if !ResourcesEqual(r1.Resources, r2.Resources) {
+		return false
+	}
+
+	// Compare members
+	return StringSlicesEqual(r1.Members, r2.Members)
 }
 
 // ResourcesEqual compares two resource structures for equality, ignoring order
