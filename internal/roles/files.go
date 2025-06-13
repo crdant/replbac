@@ -23,7 +23,7 @@ func ReadRoleFile(filePath string) (models.Role, error) {
 	}
 
 	// Read file contents
-	data, err := os.ReadFile(filePath)
+	data, err := os.ReadFile(filePath) //nolint:gosec // Reading user-provided file path is expected behavior
 	if err != nil {
 		return role, fmt.Errorf("failed to read file: %w", err)
 	}
@@ -184,7 +184,7 @@ func ValidateRoleMembers(roles []models.Role) error {
 func WriteRoleFile(role models.Role, filePath string) error {
 	// Ensure directory exists
 	dir := filepath.Dir(filePath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0750); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
@@ -204,7 +204,7 @@ func WriteRoleFile(role models.Role, filePath string) error {
 	}
 
 	// Write file
-	if err := os.WriteFile(filePath, content, 0644); err != nil {
+	if err := os.WriteFile(filePath, content, 0600); err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 

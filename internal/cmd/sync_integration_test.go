@@ -274,7 +274,9 @@ resources:
 
 			// Set flags
 			for flag, value := range tt.flags {
-				cmd.Flags().Set(flag, value)
+				if err := cmd.Flags().Set(flag, value); err != nil {
+				t.Fatalf("Failed to set flag %s: %v", flag, err)
+			}
 			}
 
 			// Execute command
@@ -405,6 +407,12 @@ func TestSyncCommandConfiguration(t *testing.T) {
 						return RunSyncCommand(cmd, args, config, false, false, false, false)
 					},
 				}
+				// Add the same flags as NewSyncCommand
+				cmd.Flags().Bool("dry-run", false, "preview changes without applying them")
+				cmd.Flags().String("roles-dir", "", "directory containing role YAML files")
+				cmd.Flags().Bool("delete", false, "delete remote roles not present in local files")
+				cmd.Flags().String("api-token", "", "Replicated API token")
+				cmd.Flags().String("config", "", "config file path")
 			} else {
 				// Other tests use mock client to avoid real API calls
 				mockCalls := &MockAPICalls{}
@@ -418,12 +426,16 @@ func TestSyncCommandConfiguration(t *testing.T) {
 			// Set config file flag if config exists
 			if len(tt.config) > 0 {
 				configPath := filepath.Join(tempDir, "config.yaml")
-				cmd.Flags().Set("config", configPath)
+				if err := cmd.Flags().Set("config", configPath); err != nil {
+					t.Fatalf("Failed to set config flag: %v", err)
+				}
 			}
 
 			// Set other flags
 			for flag, value := range tt.flags {
-				cmd.Flags().Set(flag, value)
+				if err := cmd.Flags().Set(flag, value); err != nil {
+				t.Fatalf("Failed to set flag %s: %v", flag, err)
+			}
 			}
 
 			// Execute command
@@ -635,6 +647,8 @@ func NewSyncCommand(mockClient *MockClient) *cobra.Command {
 	cmd.Flags().Bool("dry-run", false, "preview changes without applying them")
 	cmd.Flags().String("roles-dir", "", "directory containing role YAML files")
 	cmd.Flags().Bool("delete", false, "delete remote roles not present in local files")
+	cmd.Flags().String("api-token", "", "Replicated API token")
+	cmd.Flags().String("config", "", "config file path")
 
 	return cmd
 }

@@ -157,7 +157,7 @@ resources:
 				}
 
 				return restrictedDir, func() {
-					os.Chmod(restrictedDir, 0755) // Restore permissions for cleanup
+					_ = os.Chmod(restrictedDir, 0755) // Restore permissions for cleanup //nolint:errcheck
 					os.RemoveAll(tempDir)
 				}
 			},
@@ -195,7 +195,9 @@ resources:
 
 			// Set flags
 			for flag, value := range tt.flags {
-				cmd.Flags().Set(flag, value)
+				if err := cmd.Flags().Set(flag, value); err != nil {
+				t.Fatalf("Failed to set flag %s: %v", flag, err)
+			}
 			}
 
 			// Change to test directory if provided
@@ -204,7 +206,11 @@ resources:
 				if err != nil {
 					t.Fatalf("Failed to get current dir: %v", err)
 				}
-				defer os.Chdir(oldDir)
+				defer func() { 
+				if err := os.Chdir(oldDir); err != nil {
+					t.Errorf("Failed to restore directory: %v", err)
+				}
+			}()
 
 				// Use testDir as argument instead of changing directory
 				tt.args = []string{testDir}

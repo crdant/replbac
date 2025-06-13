@@ -131,7 +131,7 @@ func LoadConfigWithDefaults(defaultPaths []string) (models.Config, error) {
 func loadFromFile(configPath string) (models.Config, error) {
 	var config models.Config
 
-	data, err := os.ReadFile(configPath)
+	data, err := os.ReadFile(configPath) //nolint:gosec // Reading user-provided config file is expected behavior
 	if err != nil {
 		return config, fmt.Errorf("failed to read config file: %w", err)
 	}

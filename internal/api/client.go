@@ -110,7 +110,7 @@ func (c *Client) executeWithRetry(ctx context.Context, req *http.Request) (*http
 
 		// Check if we should retry based on status code
 		if resp.StatusCode >= 500 && resp.StatusCode < 600 {
-			resp.Body.Close()
+			_ = resp.Body.Close() //nolint:errcheck
 			lastErr = fmt.Errorf("server error: HTTP %d", resp.StatusCode)
 			c.logger.Warn("request attempt %d failed with server error: HTTP %d", attempt+1, resp.StatusCode)
 			continue

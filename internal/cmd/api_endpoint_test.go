@@ -4,8 +4,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/spf13/cobra"
-
 	"replbac/internal/models"
 )
 
@@ -99,39 +97,3 @@ func TestHardcodedAPIEndpoint(t *testing.T) {
 	t.Logf("Expected hardcoded endpoint: %s", expectedEndpoint)
 }
 
-// createTestRootCommandWithoutAPIEndpoint creates a test root command without API endpoint configuration
-func createTestRootCommandWithoutAPIEndpoint() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "replbac",
-		Short: "Replicated RBAC Synchronization Tool",
-		Long: `replbac is a CLI tool for synchronizing RBAC roles between local YAML files 
-and the Replicated platform. It allows you to manage team permissions as code,
-providing version control and automated deployment of role definitions.
-
-Key features:
-• Sync local YAML role files to Replicated API
-• Initialize local files from existing API roles  
-• Dry-run mode to preview changes before applying
-• Support for multiple configuration sources
-
-Environment Variables:
-  Configuration can be provided via environment variables as an alternative to CLI flags:
-
-  REPLICATED_API_TOKEN    Replicated API token (for replicated CLI compatibility)
-  REPLBAC_API_TOKEN       Replicated API token (alternative to REPLICATED_API_TOKEN)
-  REPLBAC_CONFIG          Path to configuration file
-  REPLBAC_CONFIRM         Automatically confirm operations (true/false)
-  REPLBAC_LOG_LEVEL       Log level (debug, info, warn, error)
-
-  Environment variables have lower precedence than CLI flags but higher than config files.
-  REPLICATED_API_TOKEN is checked first for compatibility with the replicated CLI.`,
-	}
-
-	// Add flags WITHOUT api-endpoint
-	cmd.PersistentFlags().String("config", "", "config file path (env: REPLBAC_CONFIG)")
-	cmd.PersistentFlags().String("api-token", "", "Replicated API token (env: REPLICATED_API_TOKEN, REPLBAC_API_TOKEN)")
-	cmd.PersistentFlags().Bool("confirm", false, "automatically confirm destructive operations (env: REPLBAC_CONFIRM)")
-	cmd.PersistentFlags().String("log-level", "", "log level: debug, info, warn, error (env: REPLBAC_LOG_LEVEL)")
-
-	return cmd
-}

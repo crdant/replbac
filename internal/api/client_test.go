@@ -158,11 +158,15 @@ func TestGetRoles(t *testing.T) {
 						t.Errorf("Expected Authorization header 'test-token', got '%s'", authHeader)
 					}
 					w.WriteHeader(tt.mockStatusCode)
-					w.Write([]byte(tt.mockResponse))
+					if _, err := w.Write([]byte(tt.mockResponse)); err != nil {
+						t.Errorf("Failed to write response: %v", err)
+					}
 				case "/v1/team/members":
 					// Return empty members list for simplicity
 					w.WriteHeader(http.StatusOK)
-					w.Write([]byte("[]"))
+					if _, err := w.Write([]byte("[]")); err != nil {
+						t.Errorf("Failed to write response: %v", err)
+					}
 				default:
 					t.Errorf("Unexpected path: %s", r.URL.Path)
 					w.WriteHeader(http.StatusNotFound)
@@ -283,7 +287,9 @@ func TestCreateRole(t *testing.T) {
 				}
 
 				w.WriteHeader(tt.mockStatusCode)
-				w.Write([]byte(tt.mockResponse))
+				if _, err := w.Write([]byte(tt.mockResponse)); err != nil {
+					t.Errorf("Failed to write response: %v", err)
+				}
 			}))
 			defer server.Close()
 
@@ -358,7 +364,9 @@ func TestUpdateRole(t *testing.T) {
 				}
 
 				w.WriteHeader(tt.mockStatusCode)
-				w.Write([]byte(tt.mockResponse))
+				if _, err := w.Write([]byte(tt.mockResponse)); err != nil {
+					t.Errorf("Failed to write response: %v", err)
+				}
 			}))
 			defer server.Close()
 
@@ -441,7 +449,9 @@ func TestDeleteRole(t *testing.T) {
 					}
 
 					w.WriteHeader(tt.mockStatusCode)
-					w.Write([]byte(tt.mockResponse))
+					if _, err := w.Write([]byte(tt.mockResponse)); err != nil {
+						t.Errorf("Failed to write response: %v", err)
+					}
 				}
 			}))
 			defer server.Close()
@@ -621,7 +631,9 @@ func TestGetTeamMembers(t *testing.T) {
 				}
 
 				w.WriteHeader(tt.mockStatusCode)
-				w.Write([]byte(tt.mockResponse))
+				if _, err := w.Write([]byte(tt.mockResponse)); err != nil {
+					t.Errorf("Failed to write response: %v", err)
+				}
 			}))
 			defer server.Close()
 
@@ -705,7 +717,9 @@ func TestAssignMemberRole(t *testing.T) {
 				}
 
 				w.WriteHeader(tt.mockStatusCode)
-				w.Write([]byte(tt.mockResponse))
+				if _, err := w.Write([]byte(tt.mockResponse)); err != nil {
+					t.Errorf("Failed to write response: %v", err)
+				}
 			}))
 			defer server.Close()
 
