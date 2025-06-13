@@ -99,6 +99,26 @@ User configuration file (Windows and fallback).
 .TP
 \fI*.yaml, *.yml\fR
 Role definition files in YAML format.
+.SH ROLE DEFINITION FORMAT
+Role definitions use YAML format with the following structure:
+.PP
+.RS
+.nf
+name: role-name
+resources:
+  allowed:
+    - "resource/pattern"
+  denied:
+    - "restricted/pattern"
+members:
+  - user1@example.com
+  - user2@example.com
+.fi
+.RE
+.PP
+The \fBmembers\fR field is optional and assigns team members to the role.
+Each member can only be assigned to one role at a time. Members removed
+from all roles will be deleted from the team after user confirmation.
 .SH EXAMPLES
 .PP
 Synchronize roles from current directory:

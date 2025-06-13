@@ -20,15 +20,24 @@
 
 ### From Binary Release
 
-Download the latest release for your platform from the [Releases](https://github.com/crdant/replbac/releases) page.
+Download the latest release tarball for your platform from the [Releases](https://github.com/crdant/replbac/releases) page.
 
 ```bash
+# Download and extract (replace with your platform)
+curl -L https://github.com/crdant/replbac/releases/latest/download/replbac-linux-amd64.tar.gz | tar xz
+
 # Make it executable (Linux/macOS)
 chmod +x replbac
 
 # Move to a directory in your PATH
 sudo mv replbac /usr/local/bin/
 ```
+
+For other platforms, replace `linux-amd64` with:
+- `darwin-amd64` (macOS Intel)
+- `darwin-arm64` (macOS Apple Silicon)
+- `linux-arm64` (Linux ARM64)
+- `windows-amd64` (Windows)
 
 ### Using Go
 
