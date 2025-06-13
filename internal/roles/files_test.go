@@ -711,3 +711,127 @@ func TestGenerateRoleYAML_WithMembers(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateRoleMembers(t *testing.T) {
+	tests := []struct {
+		name        string
+		roles       []models.Role
+		expectError bool
+		errorMsg    string
+	}{
+		{
+			name: "no members - valid",
+			roles: []models.Role{
+				{Name: "admin", Members: []string{}},
+				{Name: "viewer", Members: []string{}},
+			},
+		},
+		{
+			name: "unique members across roles - valid",
+			roles: []models.Role{
+				{
+					Name:    "admin",
+					Members: []string{"john@example.com", "jane@example.com"},
+				},
+				{
+					Name:    "viewer",
+					Members: []string{"bob@example.com", "alice@example.com"},
+				},
+			},
+		},
+		{
+			name: "single role with members - valid",
+			roles: []models.Role{
+				{
+					Name:    "admin",
+					Members: []string{"john@example.com", "jane@example.com"},
+				},
+			},
+		},
+		{
+			name: "duplicate member across roles - invalid",
+			roles: []models.Role{
+				{
+					Name:    "admin",
+					Members: []string{"john@example.com", "jane@example.com"},
+				},
+				{
+					Name:    "viewer",
+					Members: []string{"bob@example.com", "john@example.com"},
+				},
+			},
+			expectError: true,
+			errorMsg:    "member john@example.com appears in multiple roles: admin, viewer",
+		},
+		{
+			name: "duplicate member within same role - invalid",
+			roles: []models.Role{
+				{
+					Name:    "admin",
+					Members: []string{"john@example.com", "jane@example.com", "john@example.com"},
+				},
+			},
+			expectError: true,
+			errorMsg:    "member john@example.com appears multiple times in role admin",
+		},
+		{
+			name: "multiple duplicates - reports first found",
+			roles: []models.Role{
+				{
+					Name:    "admin",
+					Members: []string{"john@example.com", "jane@example.com"},
+				},
+				{
+					Name:    "viewer",
+					Members: []string{"john@example.com", "alice@example.com"},
+				},
+				{
+					Name:    "editor",
+					Members: []string{"bob@example.com", "jane@example.com"},
+				},
+			},
+			expectError: true,
+			errorMsg:    "member john@example.com appears in multiple roles: admin, viewer",
+		},
+		{
+			name: "empty member email - invalid",
+			roles: []models.Role{
+				{
+					Name:    "admin",
+					Members: []string{"john@example.com", "", "jane@example.com"},
+				},
+			},
+			expectError: true,
+			errorMsg:    "empty member email found in role admin",
+		},
+		{
+			name: "whitespace-only member email - invalid",
+			roles: []models.Role{
+				{
+					Name:    "admin",
+					Members: []string{"john@example.com", "   ", "jane@example.com"},
+				},
+			},
+			expectError: true,
+			errorMsg:    "empty member email found in role admin",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateRoleMembers(tt.roles)
+
+			if tt.expectError {
+				if err == nil {
+					t.Errorf("Expected error but got none")
+					return
+				}
+				if tt.errorMsg != "" && err.Error() != tt.errorMsg {
+					t.Errorf("Error message = %v, want %v", err.Error(), tt.errorMsg)
+				}
+			} else if err != nil {
+				t.Errorf("Unexpected error: %v", err)
+			}
+		})
+	}
+}
