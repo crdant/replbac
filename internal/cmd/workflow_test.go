@@ -595,6 +595,38 @@ func (m *WorkflowMockClient) DeleteRoleWithContext(ctx context.Context, roleName
 	}
 }
 
+// GetTeamMembers returns an empty list of team members for testing
+func (m *WorkflowMockClient) GetTeamMembers() ([]models.TeamMember, error) {
+	// For testing purposes, return empty list
+	return []models.TeamMember{}, nil
+}
+
+// GetTeamMembersWithContext returns an empty list of team members for testing with context support
+func (m *WorkflowMockClient) GetTeamMembersWithContext(ctx context.Context) ([]models.TeamMember, error) {
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+		return m.GetTeamMembers()
+	}
+}
+
+// AssignMemberRole is a no-op for testing
+func (m *WorkflowMockClient) AssignMemberRole(memberEmail, roleID string) error {
+	// For testing purposes, just track the call (could extend WorkflowAPICalls if needed)
+	return nil
+}
+
+// AssignMemberRoleWithContext is a no-op for testing with context support
+func (m *WorkflowMockClient) AssignMemberRoleWithContext(ctx context.Context, memberEmail, roleID string) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+		return m.AssignMemberRole(memberEmail, roleID)
+	}
+}
+
 func NewWorkflowSyncCommand(mockClient *WorkflowMockClient) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "sync [directory]",
