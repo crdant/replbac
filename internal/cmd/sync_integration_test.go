@@ -275,8 +275,8 @@ resources:
 			// Set flags
 			for flag, value := range tt.flags {
 				if err := cmd.Flags().Set(flag, value); err != nil {
-				t.Fatalf("Failed to set flag %s: %v", flag, err)
-			}
+					t.Fatalf("Failed to set flag %s: %v", flag, err)
+				}
 			}
 
 			// Execute command
@@ -434,8 +434,8 @@ func TestSyncCommandConfiguration(t *testing.T) {
 			// Set other flags
 			for flag, value := range tt.flags {
 				if err := cmd.Flags().Set(flag, value); err != nil {
-				t.Fatalf("Failed to set flag %s: %v", flag, err)
-			}
+					t.Fatalf("Failed to set flag %s: %v", flag, err)
+				}
 			}
 
 			// Execute command

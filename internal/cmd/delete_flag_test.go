@@ -173,11 +173,11 @@ resources:
 			if err != nil {
 				t.Fatalf("Failed to get working directory: %v", err)
 			}
-			defer func() { 
-			if err := os.Chdir(oldDir); err != nil {
-				t.Errorf("Failed to restore directory: %v", err)
-			}
-		}()
+			defer func() {
+				if err := os.Chdir(oldDir); err != nil {
+					t.Errorf("Failed to restore directory: %v", err)
+				}
+			}()
 
 			if err := os.Chdir(tempDir); err != nil {
 				t.Fatalf("Failed to change to temp dir: %v", err)

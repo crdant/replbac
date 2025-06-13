@@ -96,4 +96,3 @@ func TestHardcodedAPIEndpoint(t *testing.T) {
 	// The endpoint should be internally set to expectedEndpoint
 	t.Logf("Expected hardcoded endpoint: %s", expectedEndpoint)
 }
-

@@ -75,8 +75,8 @@ func TestLoggingAndFeedback(t *testing.T) {
 			// Set dry-run flag
 			if tt.dryRun {
 				if err := cmd.Flags().Set("dry-run", "true"); err != nil {
-				t.Fatalf("Failed to set dry-run flag: %v", err)
-			}
+					t.Fatalf("Failed to set dry-run flag: %v", err)
+				}
 			}
 
 			// Execute command (this will fail until we implement the logging)

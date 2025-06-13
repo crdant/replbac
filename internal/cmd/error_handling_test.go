@@ -196,8 +196,8 @@ resources:
 			// Set flags
 			for flag, value := range tt.flags {
 				if err := cmd.Flags().Set(flag, value); err != nil {
-				t.Fatalf("Failed to set flag %s: %v", flag, err)
-			}
+					t.Fatalf("Failed to set flag %s: %v", flag, err)
+				}
 			}
 
 			// Change to test directory if provided
@@ -206,11 +206,11 @@ resources:
 				if err != nil {
 					t.Fatalf("Failed to get current dir: %v", err)
 				}
-				defer func() { 
-				if err := os.Chdir(oldDir); err != nil {
-					t.Errorf("Failed to restore directory: %v", err)
-				}
-			}()
+				defer func() {
+					if err := os.Chdir(oldDir); err != nil {
+						t.Errorf("Failed to restore directory: %v", err)
+					}
+				}()
 
 				// Use testDir as argument instead of changing directory
 				tt.args = []string{testDir}
