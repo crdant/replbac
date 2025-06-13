@@ -40,3 +40,13 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.log
+
+# Compiled binaries in root (should be in bin/ instead)
+/replbac
+
+# Test files and directories in root
+test_*.go
+/test-*/
+
+# Policy files (may contain sensitive data)
+/policies/
