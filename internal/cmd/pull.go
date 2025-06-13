@@ -160,7 +160,8 @@ func RunPullCommandWithClient(cmd *cobra.Command, outputDir string, dryRun, diff
 		existingContent := ""
 		if _, err := os.Stat(filePath); err == nil {
 			// File exists
-			if existingBytes, readErr := os.ReadFile(filePath); readErr == nil { // #nosec G304 -- Reading user file to check for conflicts is expected
+			// #nosec G304 -- Reading user file to check for conflicts is expected behavior
+			if existingBytes, readErr := os.ReadFile(filePath); readErr == nil {
 				existingContent = string(existingBytes)
 			}
 

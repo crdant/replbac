@@ -79,6 +79,7 @@ func TestConfigurationLoading(t *testing.T) {
 log_level: debug
 confirm: true`
 
+	// #nosec G306 -- Test files need readable permissions
 	if err := os.WriteFile(configFile, []byte(configContent), 0644); err != nil {
 		t.Fatalf("Failed to create config file: %v", err)
 	}
@@ -112,8 +113,14 @@ confirm: true`
 			// Set environment variables
 			for key, value := range tt.envVars {
 				old := os.Getenv(key)
-				os.Setenv(key, value)
-				defer os.Setenv(key, old)
+				if err := os.Setenv(key, value); err != nil {
+					t.Fatalf("Failed to set environment variable %s: %v", key, err)
+				}
+				defer func(k, v string) {
+					if err := os.Setenv(k, v); err != nil {
+						t.Errorf("Failed to restore environment variable %s: %v", k, err)
+					}
+				}(key, old)
 			}
 
 			cmd := createTestRootCmd()

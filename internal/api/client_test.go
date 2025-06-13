@@ -432,11 +432,15 @@ func TestDeleteRole(t *testing.T) {
 					// Return policy list with the role
 					if tt.roleName == "test-role" {
 						w.WriteHeader(http.StatusOK)
-						w.Write([]byte(`{"policies": [{"id": "test-role-id", "name": "test-role", "definition": "{}"}]}`))
+						if _, err := w.Write([]byte(`{"policies": [{"id": "test-role-id", "name": "test-role", "definition": "{}"}]}`)); err != nil {
+							t.Errorf("Failed to write response: %v", err)
+						}
 					} else {
 						// Role not found in lookup
 						w.WriteHeader(http.StatusOK)
-						w.Write([]byte(`{"policies": []}`))
+						if _, err := w.Write([]byte(`{"policies": []}`)); err != nil {
+							t.Errorf("Failed to write response: %v", err)
+						}
 					}
 				} else {
 					// Second request: DELETE /vendor/v3/policy/{id}
@@ -531,11 +535,15 @@ func TestGetRole(t *testing.T) {
 				// Return policy list
 				if tt.roleName == "admin" {
 					w.WriteHeader(http.StatusOK)
-					w.Write([]byte(`{"policies": [{"id": "admin-id", "name": "admin", "definition": "{\"v1\":{\"name\":\"admin\",\"resources\":{\"allowed\":[\"**/*\"],\"denied\":[\"kots/app/*/delete\"]}}}"}]}`))
+					if _, err := w.Write([]byte(`{"policies": [{"id": "admin-id", "name": "admin", "definition": "{\"v1\":{\"name\":\"admin\",\"resources\":{\"allowed\":[\"**/*\"],\"denied\":[\"kots/app/*/delete\"]}}}"}]}`)); err != nil {
+						t.Errorf("Failed to write response: %v", err)
+					}
 				} else {
 					// Role not found
 					w.WriteHeader(http.StatusOK)
-					w.Write([]byte(`{"policies": []}`))
+					if _, err := w.Write([]byte(`{"policies": []}`)); err != nil {
+						t.Errorf("Failed to write response: %v", err)
+					}
 				}
 			}))
 			defer server.Close()

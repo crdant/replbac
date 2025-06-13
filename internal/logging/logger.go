@@ -103,7 +103,7 @@ func (l *Logger) log(level, msg string, args ...interface{}) {
 	// Then sanitize the complete formatted message
 	sanitizedMsg := l.sanitizeString(formattedMsg)
 
-	fmt.Fprintf(l.output, "[%s] %s %s\n", level, timestamp, sanitizedMsg)
+	_, _ = fmt.Fprintf(l.output, "[%s] %s %s\n", level, timestamp, sanitizedMsg)
 }
 
 // sanitizeString removes or masks sensitive data patterns in strings

@@ -22,7 +22,9 @@ func TestClientWithRetry(t *testing.T) {
 				return func(w http.ResponseWriter, r *http.Request) {
 					*attemptCount++
 					w.WriteHeader(http.StatusOK)
-					w.Write([]byte(`{"roles": []}`))
+					if _, err := w.Write([]byte(`{"roles": []}`)); err != nil {
+						t.Errorf("Failed to write response: %v", err)
+					}
 				}
 			},
 			maxRetries:     3,
@@ -39,7 +41,9 @@ func TestClientWithRetry(t *testing.T) {
 						return
 					}
 					w.WriteHeader(http.StatusOK)
-					w.Write([]byte(`{"roles": []}`))
+					if _, err := w.Write([]byte(`{"roles": []}`)); err != nil {
+						t.Errorf("Failed to write response: %v", err)
+					}
 				}
 			},
 			maxRetries:     3,
