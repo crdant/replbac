@@ -56,12 +56,7 @@ jobs:
       run: $(go env GOPATH)/bin/golangci-lint run
 
     - name: Run tests
-      run: go test -race -coverprofile=coverage.txt -covermode=atomic ./...
-
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
-      with:
-        file: ./coverage.txt
+      run: go test -race ./...
 
   build:
     name: Build
