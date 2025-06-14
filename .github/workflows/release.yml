@@ -137,16 +137,16 @@ jobs:
 
     - name: Create archives
       run: |
-        dist_dir=dist
-        bin_dir=${dist_dir}/${os}/${arch}
         workspace="$(pwd)"
-        output_name=replbac-v0.0.1-linux-amd64
+        dist_dir="${workspace}/dist"
+        bin_dir=${dist_dir}/${os}/${arch}
+        base_name=replbac-${{ step.version.output.version }}-${os}-${arch}
 
         cd "${bin_dir}" 
         if [[ ! "$os" == "windows" ]]; then 
-          tar -czf "${dist_dir}/${output_name}.tar.gz" replbac 
+          tar -czf "${dist_dir}/${base_name}.tar.gz" replbac 
         else 
-          zip "${dist_dir}/${output_name%.exe}.zip" replbac.exe 
+          zip "${dist_dir}/${base_name}.zip" replbac.exe 
         fi
 
         rm -rf "${bin_dir}"
