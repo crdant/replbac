@@ -164,10 +164,15 @@ jobs:
       id: hash
       run: |
         cd dist
-        sha256sum * > checksums.txt
+        # Only checksum files, not directories
+        sha256sum *.tar.gz *.zip 2>/dev/null | tee checksums.txt || echo "No archives found for this platform"
         
-        # Generate SLSA digests
-        echo "digests=$(sha256sum * | base64 -w0)" >> "$GITHUB_OUTPUT"
+        # Generate SLSA digests (only for files that exist)
+        if [ -s checksums.txt ]; then
+          echo "digests=$(cat checksums.txt | base64 -w0)" >> "$GITHUB_OUTPUT"
+        else
+          echo "digests=" >> "$GITHUB_OUTPUT"
+        fi
 
     - name: Create Release
       uses: softprops/action-gh-release@v1
