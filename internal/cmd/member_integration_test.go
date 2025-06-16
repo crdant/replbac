@@ -302,6 +302,25 @@ func (m *MockAPIClientWithMemberTracking) AssignMemberRoleWithContext(ctx contex
 	return m.AssignMemberRole(memberEmail, roleID)
 }
 
+// InviteUser is a no-op for testing
+func (m *MockAPIClientWithMemberTracking) InviteUser(email, policyID string) (*models.InviteUserResponse, error) {
+	return &models.InviteUserResponse{
+		Email:    email,
+		PolicyID: policyID,
+		Status:   "pending",
+	}, nil
+}
+
+// InviteUserWithContext is a no-op for testing with context support
+func (m *MockAPIClientWithMemberTracking) InviteUserWithContext(ctx context.Context, email, policyID string) (*models.InviteUserResponse, error) {
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+		return m.InviteUser(email, policyID)
+	}
+}
+
 // createTestRoleFile creates a YAML file for a test role
 func createTestRoleFile(dir string, role models.Role) error {
 	filename := filepath.Join(dir, role.Name+".yaml")

@@ -641,6 +641,26 @@ func (m *MockClient) AssignMemberRoleWithContext(ctx context.Context, memberEmai
 	}
 }
 
+// InviteUser is a no-op for testing
+func (m *MockClient) InviteUser(email, policyID string) (*models.InviteUserResponse, error) {
+	// For testing purposes, return a basic response
+	return &models.InviteUserResponse{
+		Email:    email,
+		PolicyID: policyID,
+		Status:   "pending",
+	}, nil
+}
+
+// InviteUserWithContext is a no-op for testing with context support
+func (m *MockClient) InviteUserWithContext(ctx context.Context, email, policyID string) (*models.InviteUserResponse, error) {
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+		return m.InviteUser(email, policyID)
+	}
+}
+
 // Helper functions for testing
 func NewSyncCommand(mockClient *MockClient) *cobra.Command {
 	// Create a test version of the sync command

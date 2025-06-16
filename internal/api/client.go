@@ -32,6 +32,8 @@ type ClientInterface interface {
 	GetTeamMembersWithContext(ctx context.Context) ([]models.TeamMember, error)
 	AssignMemberRole(memberEmail, roleID string) error
 	AssignMemberRoleWithContext(ctx context.Context, memberEmail, roleID string) error
+	InviteUser(email, policyID string) (*models.InviteUserResponse, error)
+	InviteUserWithContext(ctx context.Context, email, policyID string) (*models.InviteUserResponse, error)
 }
 
 // Client represents an HTTP client for the Replicated API
@@ -747,4 +749,84 @@ func (c *Client) AssignMemberRoleWithContext(ctx context.Context, memberEmail, r
 
 	c.logger.Info("successfully assigned role '%s' to member '%s'", roleID, memberEmail)
 	return nil
+}
+
+// InviteUser invites a user to the team with a specific role via the API
+func (c *Client) InviteUser(email, policyID string) (*models.InviteUserResponse, error) {
+	return c.InviteUserWithContext(context.Background(), email, policyID)
+}
+
+// InviteUserWithContext invites a user to the team with a specific role via the API with context support
+func (c *Client) InviteUserWithContext(ctx context.Context, email, policyID string) (*models.InviteUserResponse, error) {
+	c.logger.Info("inviting user '%s' with policy '%s' via API", email, policyID)
+	start := time.Now()
+	defer func() {
+		c.logger.Debug("InviteUser for '%s' completed in %v", email, time.Since(start))
+	}()
+
+	// Validate input parameters
+	if strings.TrimSpace(email) == "" {
+		c.logger.Error("email is required for user invitation")
+		return nil, fmt.Errorf("email is required")
+	}
+	if strings.TrimSpace(policyID) == "" {
+		c.logger.Error("policy ID is required for user invitation")
+		return nil, fmt.Errorf("policy ID is required")
+	}
+
+	url := c.baseURL + "/vendor/v3/team/invite"
+	c.logger.Debug("inviting user at endpoint: %s", url)
+
+	// Create request payload
+	requestData := models.InviteUserRequest{
+		Email:    email,
+		PolicyID: policyID,
+	}
+
+	jsonData, err := json.Marshal(requestData)
+	if err != nil {
+		c.logger.Error("failed to marshal invite request for '%s': %v", email, err)
+		return nil, fmt.Errorf("failed to marshal request data: %w", err)
+	}
+
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(jsonData))
+	if err != nil {
+		c.logger.Error("failed to create HTTP request for inviting user '%s': %v", email, err)
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Authorization", c.apiToken)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := c.executeWithRetry(ctx, req)
+	if err != nil {
+		c.logger.Error("HTTP request failed for inviting user '%s': %v", email, err)
+		return nil, fmt.Errorf("failed to execute request: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	c.logger.Debug("received HTTP response for inviting user '%s': status=%d", email, resp.StatusCode)
+
+	// Read response body
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		c.logger.Error("failed to read response body for inviting user '%s': %v", email, err)
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
+		c.logger.Error("failed to invite user '%s': API returned status %d", email, resp.StatusCode)
+		return nil, c.handleErrorResponse(resp)
+	}
+
+	// Parse response
+	var inviteResp models.InviteUserResponse
+	if err := json.Unmarshal(body, &inviteResp); err != nil {
+		c.logger.Error("failed to parse invite response for user '%s': %v", email, err)
+		return nil, fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	c.logger.Info("successfully invited user '%s' with policy '%s'", email, policyID)
+	return &inviteResp, nil
 }

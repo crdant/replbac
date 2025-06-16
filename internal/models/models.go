@@ -78,6 +78,21 @@ type TeamMember struct {
 	LastActiveAt string `json:"lastActiveAt,omitempty"`
 }
 
+// InviteUserRequest represents the request payload for inviting a user
+type InviteUserRequest struct {
+	Email    string `json:"email"`
+	PolicyID string `json:"policy_id"`
+}
+
+// InviteUserResponse represents the response from inviting a user
+type InviteUserResponse struct {
+	ID       string `json:"id,omitempty"`
+	Email    string `json:"email"`
+	PolicyID string `json:"policy_id,omitempty"`
+	Status   string `json:"status,omitempty"`
+	Message  string `json:"message,omitempty"`
+}
+
 // Config represents the application configuration
 type Config struct {
 	APIToken string `yaml:"api_token" json:"api_token"`

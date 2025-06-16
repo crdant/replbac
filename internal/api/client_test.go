@@ -2,11 +2,13 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
 	"testing"
+	"time"
 
 	"replbac/internal/logging"
 	"replbac/internal/models"
@@ -737,6 +739,202 @@ func TestAssignMemberRole(t *testing.T) {
 			}
 
 			err = client.AssignMemberRole(tt.memberEmail, tt.roleID)
+
+			if tt.expectError {
+				if err == nil {
+					t.Errorf("Expected error but got none")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("Unexpected error: %v", err)
+			}
+		})
+	}
+}
+
+func TestInviteUser(t *testing.T) {
+	tests := []struct {
+		name           string
+		email          string
+		policyID       string
+		mockStatusCode int
+		mockResponse   string
+		expectError    bool
+		expectedResp   *models.InviteUserResponse
+	}{
+		{
+			name:           "successful invite",
+			email:          "test@example.com",
+			policyID:       "policy123",
+			mockStatusCode: http.StatusCreated,
+			mockResponse:   `{"id": "invite123", "email": "test@example.com", "policy_id": "policy123", "status": "pending"}`,
+			expectError:    false,
+			expectedResp: &models.InviteUserResponse{
+				ID:       "invite123",
+				Email:    "test@example.com",
+				PolicyID: "policy123",
+				Status:   "pending",
+			},
+		},
+		{
+			name:           "user already exists",
+			email:          "existing@example.com",
+			policyID:       "policy123",
+			mockStatusCode: http.StatusConflict,
+			mockResponse:   `{"error": "user already exists"}`,
+			expectError:    true,
+			expectedResp:   nil,
+		},
+		{
+			name:           "invalid email",
+			email:          "invalid-email",
+			policyID:       "policy123",
+			mockStatusCode: http.StatusBadRequest,
+			mockResponse:   `{"error": "invalid email format"}`,
+			expectError:    true,
+			expectedResp:   nil,
+		},
+		{
+			name:           "empty email",
+			email:          "",
+			policyID:       "policy123",
+			mockStatusCode: http.StatusBadRequest,
+			mockResponse:   "",
+			expectError:    true,
+			expectedResp:   nil,
+		},
+		{
+			name:           "empty policy ID",
+			email:          "test@example.com",
+			policyID:       "",
+			mockStatusCode: http.StatusBadRequest,
+			mockResponse:   "",
+			expectError:    true,
+			expectedResp:   nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Method != http.MethodPost {
+					t.Errorf("Expected POST request, got %s", r.Method)
+				}
+				if r.URL.Path != "/vendor/v3/team/invite" {
+					t.Errorf("Expected path /vendor/v3/team/invite, got %s", r.URL.Path)
+				}
+
+				// Verify request body for non-empty inputs
+				if tt.email != "" && tt.policyID != "" {
+					var reqBody models.InviteUserRequest
+					if err := json.NewDecoder(r.Body).Decode(&reqBody); err != nil {
+						t.Errorf("Failed to decode request body: %v", err)
+						return
+					}
+					if reqBody.Email != tt.email {
+						t.Errorf("Expected email %s, got %s", tt.email, reqBody.Email)
+					}
+					if reqBody.PolicyID != tt.policyID {
+						t.Errorf("Expected policy ID %s, got %s", tt.policyID, reqBody.PolicyID)
+					}
+				}
+
+				w.WriteHeader(tt.mockStatusCode)
+				if _, err := w.Write([]byte(tt.mockResponse)); err != nil {
+					t.Errorf("Failed to write response: %v", err)
+				}
+			}))
+			defer server.Close()
+
+			client, err := NewClient(server.URL, "test-token", createTestLogger())
+			if err != nil {
+				t.Fatalf("Failed to create client: %v", err)
+			}
+
+			resp, err := client.InviteUser(tt.email, tt.policyID)
+
+			if tt.expectError {
+				if err == nil {
+					t.Errorf("Expected error but got none")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("Unexpected error: %v", err)
+				return
+			}
+
+			if !reflect.DeepEqual(resp, tt.expectedResp) {
+				t.Errorf("Expected response %+v, got %+v", tt.expectedResp, resp)
+			}
+		})
+	}
+}
+
+func TestInviteUserWithContext(t *testing.T) {
+	tests := []struct {
+		name           string
+		email          string
+		policyID       string
+		mockStatusCode int
+		mockResponse   string
+		contextTimeout time.Duration
+		expectError    bool
+	}{
+		{
+			name:           "successful invite with context",
+			email:          "test@example.com",
+			policyID:       "policy123",
+			mockStatusCode: http.StatusCreated,
+			mockResponse:   `{"id": "invite123", "email": "test@example.com", "policy_id": "policy123", "status": "pending"}`,
+			contextTimeout: 5 * time.Second,
+			expectError:    false,
+		},
+		{
+			name:           "context timeout",
+			email:          "test@example.com",
+			policyID:       "policy123",
+			mockStatusCode: http.StatusCreated,
+			mockResponse:   `{"id": "invite123"}`,
+			contextTimeout: 1 * time.Millisecond, // Very short timeout
+			expectError:    true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if tt.name == "context timeout" {
+					// Simulate slow server for timeout test
+					time.Sleep(10 * time.Millisecond)
+				}
+
+				if r.Method != http.MethodPost {
+					t.Errorf("Expected POST request, got %s", r.Method)
+				}
+				if r.URL.Path != "/vendor/v3/team/invite" {
+					t.Errorf("Expected path /vendor/v3/team/invite, got %s", r.URL.Path)
+				}
+
+				w.WriteHeader(tt.mockStatusCode)
+				if _, err := w.Write([]byte(tt.mockResponse)); err != nil {
+					t.Errorf("Failed to write response: %v", err)
+				}
+			}))
+			defer server.Close()
+
+			client, err := NewClient(server.URL, "test-token", createTestLogger())
+			if err != nil {
+				t.Fatalf("Failed to create client: %v", err)
+			}
+
+			ctx, cancel := context.WithTimeout(context.Background(), tt.contextTimeout)
+			defer cancel()
+
+			_, err = client.InviteUserWithContext(ctx, tt.email, tt.policyID)
 
 			if tt.expectError {
 				if err == nil {
