@@ -357,7 +357,7 @@ func (e *ExecutorWithMembers) ExecutePlan(plan SyncPlan) ExecutionResult {
 	return result
 }
 
-// assignMembersToRole assigns all specified members to a role
+// assignMembersToRole assigns all specified members to a role, inviting missing members first
 func (e *ExecutorWithMembers) assignMembersToRole(roleName string, members []string) error {
 	if len(members) == 0 {
 		e.logger.Debug("no members to assign to role: %s", roleName)
@@ -365,6 +365,40 @@ func (e *ExecutorWithMembers) assignMembersToRole(roleName string, members []str
 	}
 
 	e.logger.Debug("assigning %d members to role: %s", len(members), roleName)
+
+	// Get current team members to check who needs to be invited
+	teamMembers, err := e.client.GetTeamMembers()
+	if err != nil {
+		e.logger.Error("failed to get team members: %v", err)
+		return fmt.Errorf("failed to get team members: %w", err)
+	}
+
+	// Create a map of existing member emails for fast lookup
+	existingMembers := make(map[string]bool)
+	for _, member := range teamMembers {
+		existingMembers[member.Email] = true
+	}
+
+	// Invite missing members first
+	var inviteCount int
+	for _, memberEmail := range members {
+		if !existingMembers[memberEmail] {
+			e.logger.Debug("member %s not found in team, sending invite", memberEmail)
+			response, err := e.client.InviteUser(memberEmail, roleName)
+			if err != nil {
+				e.logger.Error("failed to invite member %s: %v", memberEmail, err)
+				return fmt.Errorf("failed to invite member '%s': %w", memberEmail, err)
+			}
+			e.logger.Info("successfully invited member %s (status: %s)", memberEmail, response.Status)
+			inviteCount++
+		}
+	}
+
+	if inviteCount > 0 {
+		e.logger.Info("invited %d new members for role: %s", inviteCount, roleName)
+	}
+
+	// Assign all members to the role (both existing and newly invited)
 	for _, memberEmail := range members {
 		e.logger.Debug("assigning member %s to role %s", memberEmail, roleName)
 		if err := e.client.AssignMemberRole(memberEmail, roleName); err != nil {
