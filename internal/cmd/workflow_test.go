@@ -640,6 +640,25 @@ func (m *WorkflowMockClient) AssignMemberRoleWithContext(ctx context.Context, me
 	}
 }
 
+// InviteUser is a no-op for testing
+func (m *WorkflowMockClient) InviteUser(email, policyID string) (*models.InviteUserResponse, error) {
+	return &models.InviteUserResponse{
+		Email:    email,
+		PolicyID: policyID,
+		Status:   "pending",
+	}, nil
+}
+
+// InviteUserWithContext is a no-op for testing with context support
+func (m *WorkflowMockClient) InviteUserWithContext(ctx context.Context, email, policyID string) (*models.InviteUserResponse, error) {
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+		return m.InviteUser(email, policyID)
+	}
+}
+
 func NewWorkflowSyncCommand(mockClient *WorkflowMockClient) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "sync [directory]",
