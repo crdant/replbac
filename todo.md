@@ -92,13 +92,13 @@
 - [x] Implement SLSA compliant release pipeline
 
 #### Step 13: Support Member Invites
-- [ ] Add `InviteUser` method to `ClientInterface` in `internal/api/client.go`
-- [ ] Implement `InviteUser` and `InviteUserWithContext` methods using POST `/vendor/v3/team/invite`
-- [ ] Add invite request/response data structures to `internal/models/models.go`
+- [x] Add `InviteUser` method to `ClientInterface` in `internal/api/client.go`
+- [x] Implement `InviteUser` and `InviteUserWithContext` methods using POST `/vendor/v3/team/invite`
+- [x] Add invite request/response data structures to `internal/models/models.go`
 - [ ] Add invite functionality to sync logic when members don't exist in team
 - [ ] Handle invite API errors (user already exists, invalid email, etc.)
 - [ ] Add invite support to CLI commands with appropriate flags/options
-- [ ] Write comprehensive tests for invite functionality
+- [x] Write comprehensive tests for invite functionality
 - [ ] Update documentation with invite workflow examples
 
 #### Step 14: Build System and Integration
