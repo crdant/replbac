@@ -126,7 +126,13 @@ jobs:
         GOARCH: ${{ matrix.arch }}
       run: |
         mkdir -p dist
-        go build -o dist/${{ matrix.os }}/${{ matrix.arch }}/replbac${{ matrix.os == 'windows' && '.exe' || '' }} ./cmd/replbac
+        VERSION=${{ steps.version.outputs.version }}
+        COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+        BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+        go build \
+          -ldflags "-X replbac/internal/cmd.Version=${VERSION} -X replbac/internal/cmd.GitCommit=${COMMIT} -X replbac/internal/cmd.BuildDate=${BUILD_DATE}" \
+          -o dist/${{ matrix.os }}/${{ matrix.arch }}/replbac${{ matrix.os == 'windows' && '.exe' || '' }} \
+          ./cmd/replbac
         ls dist/${{ matrix.os }}/${{ matrix.arch }}/replbac${{ matrix.os == 'windows' && '.exe' || '' }} 
 
     - name: Test binary
@@ -139,11 +145,13 @@ jobs:
       run: |
         workspace="$(pwd)"
         dist_dir="${workspace}/dist"
-        bin_dir=${dist_dir}/${os}/${arch}
-        base_name=replbac-${{ steps.version.output.version }}-${os}-${arch}
+        os="${{ matrix.os }}"
+        arch="${{ matrix.arch }}"
+        bin_dir="${dist_dir}/${os}/${arch}"
+        base_name="replbac-${{ steps.version.outputs.version }}-${os}-${arch}"
 
         cd "${bin_dir}" 
-        if [[ ! "$os" == "windows" ]]; then 
+        if [[ ! "${os}" == "windows" ]]; then 
           tar -czf "${dist_dir}/${base_name}.tar.gz" replbac 
         else 
           zip "${dist_dir}/${base_name}.zip" replbac.exe 

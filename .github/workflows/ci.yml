@@ -115,7 +115,13 @@ jobs:
         GOARCH: ${{ matrix.arch }}
       run: |
         mkdir -p bin
-        go build -o bin/replbac-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.os == 'windows' && '.exe' || '' }} ./cmd/replbac
+        VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "dev")
+        COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+        BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+        go build \
+          -ldflags "-X replbac/internal/cmd.Version=${VERSION} -X replbac/internal/cmd.GitCommit=${COMMIT} -X replbac/internal/cmd.BuildDate=${BUILD_DATE}" \
+          -o bin/replbac-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.os == 'windows' && '.exe' || '' }} \
+          ./cmd/replbac
 
     - name: Test binary
       if: matrix.os == 'linux' && matrix.arch == 'amd64'
