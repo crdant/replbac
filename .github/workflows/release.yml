@@ -140,7 +140,7 @@ jobs:
         workspace="$(pwd)"
         dist_dir="${workspace}/dist"
         bin_dir=${dist_dir}/${os}/${arch}
-        base_name=replbac-${{ step.version.output.version }}-${os}-${arch}
+        base_name=replbac-${{ steps.version.output.version }}-${os}-${arch}
 
         cd "${bin_dir}" 
         if [[ ! "$os" == "windows" ]]; then 
