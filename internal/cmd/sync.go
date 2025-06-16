@@ -16,12 +16,14 @@ import (
 )
 
 var (
-	syncDryRun bool
-	syncDiff   bool
-	syncDelete bool
-	syncForce  bool
-	verbose    bool
-	debug      bool
+	syncDryRun    bool
+	syncDiff      bool
+	syncDelete    bool
+	syncForce     bool
+	syncAutoInvite bool
+	syncNoInvite  bool
+	verbose       bool
+	debug         bool
 )
 
 // syncCmd represents the sync command
@@ -53,7 +55,9 @@ Environment Variables:
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// If diff is enabled, enable dry-run too
 		effectiveDryRun := syncDryRun || syncDiff
-		return RunSyncCommand(cmd, args, cfg, effectiveDryRun, syncDiff, syncDelete, syncForce)
+		// Calculate effective invite setting (no-invite overrides auto-invite)
+		effectiveAutoInvite := syncAutoInvite && !syncNoInvite
+		return RunSyncCommand(cmd, args, cfg, effectiveDryRun, syncDiff, syncDelete, syncForce, effectiveAutoInvite)
 	},
 }
 
@@ -65,12 +69,14 @@ func init() {
 	syncCmd.Flags().BoolVar(&syncDiff, "diff", false, "preview changes with detailed diffs (implies --dry-run)")
 	syncCmd.Flags().BoolVar(&syncDelete, "delete", false, "delete remote roles not present in local files (default: false)")
 	syncCmd.Flags().BoolVar(&syncForce, "force", false, "skip confirmation prompts (requires --delete)")
+	syncCmd.Flags().BoolVar(&syncAutoInvite, "auto-invite", false, "automatically invite missing team members before role assignment")
+	syncCmd.Flags().BoolVar(&syncNoInvite, "no-invite", false, "disable automatic invitation of missing members (overrides --auto-invite)")
 	syncCmd.Flags().BoolVar(&verbose, "verbose", false, "enable info-level logging to stderr (progress and results)")
 	syncCmd.Flags().BoolVar(&debug, "debug", false, "enable debug-level logging to stderr (detailed operation info)")
 }
 
 // RunSyncCommand implements the main sync logic with comprehensive error handling
-func RunSyncCommand(cmd *cobra.Command, args []string, config models.Config, dryRun bool, diff bool, delete bool, force bool) error {
+func RunSyncCommand(cmd *cobra.Command, args []string, config models.Config, dryRun bool, diff bool, delete bool, force bool, autoInvite bool) error {
 	// Ensure command output goes to stdout and logs go to stderr (unless already set for testing)
 	if cmd.OutOrStdout() == os.Stderr {
 		cmd.SetOut(os.Stdout)
@@ -125,11 +131,11 @@ func RunSyncCommand(cmd *cobra.Command, args []string, config models.Config, dry
 	}
 
 	// Use the enhanced logging version
-	return RunSyncCommandWithLogging(cmd, args, client, dryRun, diff, delete, force, logger, config)
+	return RunSyncCommandWithLogging(cmd, args, client, dryRun, diff, delete, force, autoInvite, logger, config)
 }
 
 // RunSyncCommandWithLogging implements sync with enhanced logging and user feedback
-func RunSyncCommandWithLogging(cmd *cobra.Command, args []string, client api.ClientInterface, dryRun bool, diff bool, delete bool, force bool, logger *logging.Logger, config models.Config) error {
+func RunSyncCommandWithLogging(cmd *cobra.Command, args []string, client api.ClientInterface, dryRun bool, diff bool, delete bool, force bool, autoInvite bool, logger *logging.Logger, config models.Config) error {
 	// Determine roles directory
 	targetDir := "."
 	if len(args) > 0 {
@@ -271,8 +277,8 @@ func RunSyncCommandWithLogging(cmd *cobra.Command, args []string, client api.Cli
 		hasMembers := rolesHaveMembers(localRoles)
 
 		if hasMembers {
-			logger.Debug("roles contain members - using ExecutorWithMembers")
-			executor := sync.NewExecutorWithMembers(client.(sync.APIClientWithMembers), logger)
+			logger.Debug("roles contain members - using ExecutorWithMembers (auto-invite: %v)", autoInvite)
+			executor := sync.NewExecutorWithMembersAndInvite(client.(sync.APIClientWithMembers), logger, autoInvite)
 			if dryRun {
 				if diff {
 					result = executor.ExecutePlanDryRunWithDiffs(plan)
@@ -321,6 +327,12 @@ func RunSyncCommandWithLogging(cmd *cobra.Command, args []string, client api.Cli
 
 // RunSyncCommandWithClient implements the main sync logic with dependency injection
 func RunSyncCommandWithClient(cmd *cobra.Command, args []string, client api.ClientInterface, dryRun bool, delete bool, force bool) error {
+	// For backward compatibility, default autoInvite to true
+	return RunSyncCommandWithClientAndInvite(cmd, args, client, dryRun, delete, force, true)
+}
+
+// RunSyncCommandWithClientAndInvite implements the main sync logic with dependency injection and invite control
+func RunSyncCommandWithClientAndInvite(cmd *cobra.Command, args []string, client api.ClientInterface, dryRun bool, delete bool, force bool, autoInvite bool) error {
 	// Ensure command output goes to stdout and logs go to stderr (unless already set for testing)
 	if cmd.OutOrStdout() == os.Stderr {
 		cmd.SetOut(os.Stdout)
@@ -438,8 +450,8 @@ func RunSyncCommandWithClient(cmd *cobra.Command, args []string, client api.Clie
 	hasMembers := rolesHaveMembers(localRoles)
 
 	if hasMembers {
-		logger.Debug("roles contain members - using ExecutorWithMembers")
-		executor := sync.NewExecutorWithMembers(client.(sync.APIClientWithMembers), logger)
+		logger.Debug("roles contain members - using ExecutorWithMembers (auto-invite: %v)", autoInvite)
+		executor := sync.NewExecutorWithMembersAndInvite(client.(sync.APIClientWithMembers), logger, autoInvite)
 		if dryRun {
 			result = executor.ExecutePlanDryRun(plan)
 		} else {

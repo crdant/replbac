@@ -32,8 +32,9 @@ type Executor struct {
 
 // ExecutorWithMembers handles the execution of sync plans including member assignments
 type ExecutorWithMembers struct {
-	client APIClientWithMembers
-	logger *logging.Logger
+	client     APIClientWithMembers
+	logger     *logging.Logger
+	autoInvite bool
 }
 
 // ExecutionResult represents the result of executing a sync plan
@@ -57,8 +58,18 @@ func NewExecutor(client APIClient, logger *logging.Logger) *Executor {
 // NewExecutorWithMembers creates a new sync executor with member management support
 func NewExecutorWithMembers(client APIClientWithMembers, logger *logging.Logger) *ExecutorWithMembers {
 	return &ExecutorWithMembers{
-		client: client,
-		logger: logger,
+		client:     client,
+		logger:     logger,
+		autoInvite: true, // Default to auto-invite for backward compatibility
+	}
+}
+
+// NewExecutorWithMembersAndInvite creates a new sync executor with configurable invite behavior
+func NewExecutorWithMembersAndInvite(client APIClientWithMembers, logger *logging.Logger, autoInvite bool) *ExecutorWithMembers {
+	return &ExecutorWithMembers{
+		client:     client,
+		logger:     logger,
+		autoInvite: autoInvite,
 	}
 }
 
@@ -379,23 +390,36 @@ func (e *ExecutorWithMembers) assignMembersToRole(roleName string, members []str
 		existingMembers[member.Email] = true
 	}
 
-	// Invite missing members first
+	// Invite missing members first (if auto-invite is enabled)
 	var inviteCount int
-	for _, memberEmail := range members {
-		if !existingMembers[memberEmail] {
-			e.logger.Debug("member %s not found in team, sending invite", memberEmail)
-			response, err := e.client.InviteUser(memberEmail, roleName)
-			if err != nil {
-				e.logger.Error("failed to invite member %s: %v", memberEmail, err)
-				return fmt.Errorf("failed to invite member '%s': %w", memberEmail, err)
+	if e.autoInvite {
+		for _, memberEmail := range members {
+			if !existingMembers[memberEmail] {
+				e.logger.Debug("member %s not found in team, sending invite", memberEmail)
+				response, err := e.client.InviteUser(memberEmail, roleName)
+				if err != nil {
+					e.logger.Error("failed to invite member %s: %v", memberEmail, err)
+					return fmt.Errorf("failed to invite member '%s': %w", memberEmail, err)
+				}
+				e.logger.Info("successfully invited member %s (status: %s)", memberEmail, response.Status)
+				inviteCount++
 			}
-			e.logger.Info("successfully invited member %s (status: %s)", memberEmail, response.Status)
-			inviteCount++
 		}
-	}
 
-	if inviteCount > 0 {
-		e.logger.Info("invited %d new members for role: %s", inviteCount, roleName)
+		if inviteCount > 0 {
+			e.logger.Info("invited %d new members for role: %s", inviteCount, roleName)
+		}
+	} else {
+		// Log missing members but don't invite them
+		var missingMembers []string
+		for _, memberEmail := range members {
+			if !existingMembers[memberEmail] {
+				missingMembers = append(missingMembers, memberEmail)
+			}
+		}
+		if len(missingMembers) > 0 {
+			e.logger.Warn("role %s has %d members not in team (auto-invite disabled): %v", roleName, len(missingMembers), missingMembers)
+		}
 	}
 
 	// Assign all members to the role (both existing and newly invited)

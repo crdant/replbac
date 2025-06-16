@@ -1213,3 +1213,34 @@ func TestExecutorWithMembers_GetTeamMembersFailure(t *testing.T) {
 		t.Errorf("Expected GetTeamMembers failure error, got: %v", err)
 	}
 }
+
+func TestExecutorWithMembers_AutoInviteDisabled(t *testing.T) {
+	mockClient := &MockAPIClientWithMembers{
+		MockAPIClient: MockAPIClient{},
+		GetTeamMembersFunc: func() ([]models.TeamMember, error) {
+			return []models.TeamMember{
+				{ID: "1", Email: "existing@example.com"},
+			}, nil
+		},
+	}
+
+	// Create executor with auto-invite disabled
+	executor := NewExecutorWithMembersAndInvite(mockClient, createTestLogger(), false)
+
+	// Test with missing members
+	err := executor.assignMembersToRole("test-role", []string{"existing@example.com", "new@example.com"})
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+
+	// Verify no invites were sent
+	if len(mockClient.InvitedMembers) != 0 {
+		t.Errorf("Expected no invites when auto-invite is disabled, got %d", len(mockClient.InvitedMembers))
+	}
+
+	// Verify assignments still happened
+	assignedMembers := mockClient.AssignedMembers["test-role"]
+	if len(assignedMembers) != 2 {
+		t.Errorf("Expected 2 assignments, got %d", len(assignedMembers))
+	}
+}

@@ -417,7 +417,7 @@ func TestSyncCommandConfiguration(t *testing.T) {
 						config := models.Config{
 							APIToken: "", // Empty token for this test
 						}
-						return RunSyncCommand(cmd, args, config, false, false, false, false)
+						return RunSyncCommand(cmd, args, config, false, false, false, false, true)
 					},
 				}
 				// Add the same flags as NewSyncCommand
