@@ -16,14 +16,13 @@ import (
 )
 
 var (
-	syncDryRun    bool
-	syncDiff      bool
-	syncDelete    bool
-	syncForce     bool
-	syncAutoInvite bool
-	syncNoInvite  bool
-	verbose       bool
-	debug         bool
+	syncDryRun   bool
+	syncDiff     bool
+	syncDelete   bool
+	syncForce    bool
+	syncNoInvite bool
+	verbose      bool
+	debug        bool
 )
 
 // syncCmd represents the sync command
@@ -55,8 +54,8 @@ Environment Variables:
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// If diff is enabled, enable dry-run too
 		effectiveDryRun := syncDryRun || syncDiff
-		// Calculate effective invite setting (no-invite overrides auto-invite)
-		effectiveAutoInvite := syncAutoInvite && !syncNoInvite
+		// Auto-invite is enabled by default, disabled by --no-invite flag
+		effectiveAutoInvite := !syncNoInvite
 		return RunSyncCommand(cmd, args, cfg, effectiveDryRun, syncDiff, syncDelete, syncForce, effectiveAutoInvite)
 	},
 }
@@ -69,8 +68,7 @@ func init() {
 	syncCmd.Flags().BoolVar(&syncDiff, "diff", false, "preview changes with detailed diffs (implies --dry-run)")
 	syncCmd.Flags().BoolVar(&syncDelete, "delete", false, "delete remote roles not present in local files (default: false)")
 	syncCmd.Flags().BoolVar(&syncForce, "force", false, "skip confirmation prompts (requires --delete)")
-	syncCmd.Flags().BoolVar(&syncAutoInvite, "auto-invite", false, "automatically invite missing team members before role assignment")
-	syncCmd.Flags().BoolVar(&syncNoInvite, "no-invite", false, "disable automatic invitation of missing members (overrides --auto-invite)")
+	syncCmd.Flags().BoolVar(&syncNoInvite, "no-invite", false, "disable automatic invitation of missing members (default: auto-invite enabled)")
 	syncCmd.Flags().BoolVar(&verbose, "verbose", false, "enable info-level logging to stderr (progress and results)")
 	syncCmd.Flags().BoolVar(&debug, "debug", false, "enable debug-level logging to stderr (detailed operation info)")
 }
