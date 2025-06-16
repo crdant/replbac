@@ -79,12 +79,10 @@ jobs:
       with:
         args: './...'
 
-  release:
-    name: release
+  build:
+    name: build
     runs-on: ubuntu-latest
     needs: security
-    outputs:
-      digests: ${{ steps.hash.outputs.digests }}
     strategy:
       matrix:
         os: [linux, darwin, windows]
@@ -160,12 +158,40 @@ jobs:
         rm -rf "${bin_dir}"
         cd "${workspace}"
 
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: replbac-${{ matrix.os }}-${{ matrix.arch }}
+        path: dist/*
+
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: build
+    outputs:
+      digests: ${{ steps.hash.outputs.digests }}
+    
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v4
+
+    - name: Download all artifacts
+      uses: actions/download-artifact@v3
+      with:
+        path: artifacts
+
+    - name: Organize release files
+      run: |
+        mkdir -p dist
+        find artifacts -name "*.tar.gz" -o -name "*.zip" | xargs -I {} cp {} dist/
+        ls -la dist/
+
     - name: Generate checksums and digests
       id: hash
       run: |
         cd dist
         # Only checksum files, not directories
-        sha256sum *.tar.gz *.zip 2>/dev/null | tee checksums.txt || echo "No archives found for this platform"
+        sha256sum *.tar.gz *.zip 2>/dev/null | tee checksums.txt || echo "No archives found"
         
         # Generate SLSA digests (only for files that exist)
         if [ -s checksums.txt ]; then
