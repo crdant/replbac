@@ -3,6 +3,7 @@ package sync
 import (
 	"bytes"
 	"errors"
+	"strings"
 	"testing"
 
 	"replbac/internal/logging"
@@ -1010,9 +1011,11 @@ type MockAPIClientWithMembers struct {
 	MockAPIClient
 	GetTeamMembersFunc   func() ([]models.TeamMember, error)
 	AssignMemberRoleFunc func(memberEmail, roleID string) error
+	InviteUserFunc       func(email, policyID string) (*models.InviteUserResponse, error)
 
-	// Track member assignments for verification
-	AssignedMembers map[string][]string // roleName -> list of member emails
+	// Track member assignments and invites for verification
+	AssignedMembers map[string][]string                     // roleName -> list of member emails
+	InvitedMembers  map[string]*models.InviteUserResponse   // email -> invite response
 }
 
 func (m *MockAPIClientWithMembers) GetTeamMembers() ([]models.TeamMember, error) {
@@ -1032,4 +1035,181 @@ func (m *MockAPIClientWithMembers) AssignMemberRole(memberEmail, roleID string) 
 		return m.AssignMemberRoleFunc(memberEmail, roleID)
 	}
 	return nil
+}
+
+func (m *MockAPIClientWithMembers) InviteUser(email, policyID string) (*models.InviteUserResponse, error) {
+	if m.InvitedMembers == nil {
+		m.InvitedMembers = make(map[string]*models.InviteUserResponse)
+	}
+
+	// Default response
+	response := &models.InviteUserResponse{
+		Email:    email,
+		PolicyID: policyID,
+		Status:   "pending",
+	}
+	m.InvitedMembers[email] = response
+
+	if m.InviteUserFunc != nil {
+		return m.InviteUserFunc(email, policyID)
+	}
+	return response, nil
+}
+
+func TestExecutorWithMembers_InviteMissingMembers(t *testing.T) {
+	tests := []struct {
+		name            string
+		existingMembers []models.TeamMember
+		roleMembers     []string
+		expectInvites   []string
+		expectAssigns   []string
+		expectError     bool
+	}{
+		{
+			name: "invite missing member and assign existing member",
+			existingMembers: []models.TeamMember{
+				{ID: "1", Email: "existing@example.com"},
+			},
+			roleMembers:   []string{"existing@example.com", "new@example.com"},
+			expectInvites: []string{"new@example.com"},
+			expectAssigns: []string{"existing@example.com", "new@example.com"},
+			expectError:   false,
+		},
+		{
+			name: "all members exist - no invites needed",
+			existingMembers: []models.TeamMember{
+				{ID: "1", Email: "alice@example.com"},
+				{ID: "2", Email: "bob@example.com"},
+			},
+			roleMembers:   []string{"alice@example.com", "bob@example.com"},
+			expectInvites: []string{},
+			expectAssigns: []string{"alice@example.com", "bob@example.com"},
+			expectError:   false,
+		},
+		{
+			name:            "all members need invites",
+			existingMembers: []models.TeamMember{},
+			roleMembers:     []string{"new1@example.com", "new2@example.com"},
+			expectInvites:   []string{"new1@example.com", "new2@example.com"},
+			expectAssigns:   []string{"new1@example.com", "new2@example.com"},
+			expectError:     false,
+		},
+		{
+			name:            "no members to assign",
+			existingMembers: []models.TeamMember{},
+			roleMembers:     []string{},
+			expectInvites:   []string{},
+			expectAssigns:   []string{},
+			expectError:     false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockClient := &MockAPIClientWithMembers{
+				MockAPIClient: MockAPIClient{},
+				GetTeamMembersFunc: func() ([]models.TeamMember, error) {
+					return tt.existingMembers, nil
+				},
+			}
+
+			executor := NewExecutorWithMembers(mockClient, createTestLogger())
+
+			role := models.Role{
+				ID:      "test-role-id",
+				Name:    "test-role",
+				Members: tt.roleMembers,
+			}
+
+			// Test the member assignment logic directly
+			err := executor.assignMembersToRole(role.Name, role.Members)
+
+			if tt.expectError && err == nil {
+				t.Errorf("Expected error but got none")
+				return
+			}
+			if !tt.expectError && err != nil {
+				t.Errorf("Unexpected error: %v", err)
+				return
+			}
+
+			// Verify invites
+			if len(mockClient.InvitedMembers) != len(tt.expectInvites) {
+				t.Errorf("Expected %d invites, got %d", len(tt.expectInvites), len(mockClient.InvitedMembers))
+			}
+			for _, expectedEmail := range tt.expectInvites {
+				if _, found := mockClient.InvitedMembers[expectedEmail]; !found {
+					t.Errorf("Expected invite for %s but not found", expectedEmail)
+				}
+			}
+
+			// Verify assignments
+			assignedMembers := mockClient.AssignedMembers[role.Name]
+			if len(assignedMembers) != len(tt.expectAssigns) {
+				t.Errorf("Expected %d assignments, got %d", len(tt.expectAssigns), len(assignedMembers))
+			}
+			for _, expectedEmail := range tt.expectAssigns {
+				found := false
+				for _, assignedEmail := range assignedMembers {
+					if assignedEmail == expectedEmail {
+						found = true
+						break
+					}
+				}
+				if !found {
+					t.Errorf("Expected assignment for %s but not found", expectedEmail)
+				}
+			}
+		})
+	}
+}
+
+func TestExecutorWithMembers_InviteFailure(t *testing.T) {
+	mockClient := &MockAPIClientWithMembers{
+		MockAPIClient: MockAPIClient{},
+		GetTeamMembersFunc: func() ([]models.TeamMember, error) {
+			return []models.TeamMember{}, nil // No existing members
+		},
+		InviteUserFunc: func(email, policyID string) (*models.InviteUserResponse, error) {
+			if email == "fail@example.com" {
+				return nil, errors.New("invite failed")
+			}
+			return &models.InviteUserResponse{
+				Email:    email,
+				PolicyID: policyID,
+				Status:   "pending",
+			}, nil
+		},
+	}
+
+	executor := NewExecutorWithMembers(mockClient, createTestLogger())
+
+	// Test invite failure
+	err := executor.assignMembersToRole("test-role", []string{"fail@example.com"})
+	if err == nil {
+		t.Errorf("Expected error from invite failure but got none")
+	}
+	if !strings.Contains(err.Error(), "failed to invite member") {
+		t.Errorf("Expected invite failure error, got: %v", err)
+	}
+}
+
+func TestExecutorWithMembers_GetTeamMembersFailure(t *testing.T) {
+	mockClient := &MockAPIClientWithMembers{
+		MockAPIClient: MockAPIClient{},
+		GetTeamMembersFunc: func() ([]models.TeamMember, error) {
+			return nil, errors.New("failed to get team members")
+		},
+	}
+
+	executor := NewExecutorWithMembers(mockClient, createTestLogger())
+
+	// Test GetTeamMembers failure
+	err := executor.assignMembersToRole("test-role", []string{"test@example.com"})
+	if err == nil {
+		t.Errorf("Expected error from GetTeamMembers failure but got none")
+	}
+	if !strings.Contains(err.Error(), "failed to get team members") {
+		t.Errorf("Expected GetTeamMembers failure error, got: %v", err)
+	}
 }

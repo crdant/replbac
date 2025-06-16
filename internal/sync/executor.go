@@ -21,6 +21,7 @@ type APIClientWithMembers interface {
 	APIClient
 	GetTeamMembers() ([]models.TeamMember, error)
 	AssignMemberRole(memberEmail, roleID string) error
+	InviteUser(email, policyID string) (*models.InviteUserResponse, error)
 }
 
 // Executor handles the execution of sync plans
