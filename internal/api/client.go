@@ -32,6 +32,8 @@ type ClientInterface interface {
 	GetTeamMembersWithContext(ctx context.Context) ([]models.TeamMember, error)
 	AssignMemberRole(memberEmail, roleID string) error
 	AssignMemberRoleWithContext(ctx context.Context, memberEmail, roleID string) error
+	InviteUser(email, policyID string) (*models.InviteUserResponse, error)
+	InviteUserWithContext(ctx context.Context, email, policyID string) (*models.InviteUserResponse, error)
 }
 
 // Client represents an HTTP client for the Replicated API
