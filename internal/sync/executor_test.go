@@ -1028,10 +1028,10 @@ type MockAPIClientWithMembers struct {
 	DeleteInviteFunc     func(email string) error
 
 	// Track member assignments and invites for verification
-	AssignedMembers map[string][]string                     // roleName -> list of member emails
-	InvitedMembers  map[string]*models.InviteUserResponse   // email -> invite response
-	DeletedInvites  []string                                // list of deleted invite emails
-	RemovedUsers    []string                                // list of removed user emails (via empty role assignment)
+	AssignedMembers map[string][]string                   // roleName -> list of member emails
+	InvitedMembers  map[string]*models.InviteUserResponse // email -> invite response
+	DeletedInvites  []string                              // list of deleted invite emails
+	RemovedUsers    []string                              // list of removed user emails (via empty role assignment)
 }
 
 func (m *MockAPIClientWithMembers) GetTeamMembers() ([]models.TeamMember, error) {
@@ -1045,7 +1045,7 @@ func (m *MockAPIClientWithMembers) AssignMemberRole(memberEmail, roleID string) 
 	if m.AssignedMembers == nil {
 		m.AssignedMembers = make(map[string][]string)
 	}
-	
+
 	// Track user removal (empty role assignment)
 	if roleID == "" {
 		m.RemovedUsers = append(m.RemovedUsers, memberEmail)
@@ -1081,12 +1081,12 @@ func (m *MockAPIClientWithMembers) InviteUser(email, policyID string) (*models.I
 func (m *MockAPIClientWithMembers) DeleteInvite(email string) error {
 	// Track deleted invites
 	m.DeletedInvites = append(m.DeletedInvites, email)
-	
+
 	// Remove from invited members if present
 	if m.InvitedMembers != nil {
 		delete(m.InvitedMembers, email)
 	}
-	
+
 	if m.DeleteInviteFunc != nil {
 		return m.DeleteInviteFunc(email)
 	}

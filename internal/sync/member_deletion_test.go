@@ -8,13 +8,13 @@ import (
 
 func TestExecutorWithMembers_MemberDeletions(t *testing.T) {
 	tests := []struct {
-		name                  string
-		plan                  SyncPlan
-		existingMembers       []models.TeamMember
-		expectedOrphanedUsers []string
+		name                    string
+		plan                    SyncPlan
+		existingMembers         []models.TeamMember
+		expectedOrphanedUsers   []string
 		expectedOrphanedInvites []string
-		expectError           bool
-		errorContains         string
+		expectError             bool
+		errorContains           string
 	}{
 		{
 			name: "orphaned users and invites are identified",
@@ -92,7 +92,7 @@ func TestExecutorWithMembers_MemberDeletions(t *testing.T) {
 					{
 						Name: "viewer",
 						Local: models.Role{
-							Name:    "viewer", 
+							Name:    "viewer",
 							Members: []string{"conflict@example.com"},
 						},
 						Remote: models.Role{
@@ -215,9 +215,9 @@ func TestExecutorWithMembers_MemberDeletions(t *testing.T) {
 
 func TestExecutorWithMembers_DeleteMembersAndInvites(t *testing.T) {
 	tests := []struct {
-		name         string
-		deletions    *MemberDeletions
-		expectError  bool
+		name                string
+		deletions           *MemberDeletions
+		expectError         bool
 		expectInviteDeletes []string
 		expectUserRemovals  []string
 	}{
@@ -299,9 +299,9 @@ func TestExecutorWithMembers_DeleteMembersAndInvites(t *testing.T) {
 
 // Helper function to check if string contains substring
 func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || (len(s) > len(substr) && 
-		(s[:len(substr)] == substr || s[len(s)-len(substr):] == substr || 
-		 containsAny(s, substr))))
+	return len(s) >= len(substr) && (s == substr || (len(s) > len(substr) &&
+		(s[:len(substr)] == substr || s[len(s)-len(substr):] == substr ||
+			containsAny(s, substr))))
 }
 
 func containsAny(s, substr string) bool {
@@ -318,24 +318,24 @@ func slicesEqual(a, b []string) bool {
 	if len(a) != len(b) {
 		return false
 	}
-	
+
 	// Create maps for comparison
 	mapA := make(map[string]int)
 	mapB := make(map[string]int)
-	
+
 	for _, item := range a {
 		mapA[item]++
 	}
 	for _, item := range b {
 		mapB[item]++
 	}
-	
+
 	// Compare maps
 	for k, v := range mapA {
 		if mapB[k] != v {
 			return false
 		}
 	}
-	
+
 	return true
 }

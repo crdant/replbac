@@ -509,7 +509,7 @@ func rolesHaveMembers(roles []models.Role) bool {
 // confirmAndDeleteMembers prompts for confirmation and deletes orphaned members/invites
 func confirmAndDeleteMembers(cmd *cobra.Command, client api.ClientInterface, deletions *sync.MemberDeletions, force bool, logger *logging.Logger) error {
 	totalDeletions := len(deletions.OrphanedUsers) + len(deletions.OrphanedInvites)
-	
+
 	// Show what will be deleted
 	if len(deletions.OrphanedUsers) > 0 {
 		cmd.Printf("\nThis operation will permanently remove %d team member(s) from the API:\n", len(deletions.OrphanedUsers))
@@ -517,7 +517,7 @@ func confirmAndDeleteMembers(cmd *cobra.Command, client api.ClientInterface, del
 			cmd.Printf("  - %s\n", email)
 		}
 	}
-	
+
 	if len(deletions.OrphanedInvites) > 0 {
 		cmd.Printf("\nThis operation will cancel %d pending invitation(s):\n", len(deletions.OrphanedInvites))
 		for _, email := range deletions.OrphanedInvites {
@@ -555,7 +555,7 @@ func confirmAndDeleteMembers(cmd *cobra.Command, client api.ClientInterface, del
 		return fmt.Errorf("failed to delete members and invites: %w", err)
 	}
 
-	cmd.Printf("Successfully removed %d member(s) and cancelled %d invitation(s)\n", 
+	cmd.Printf("Successfully removed %d member(s) and cancelled %d invitation(s)\n",
 		len(deletions.OrphanedUsers), len(deletions.OrphanedInvites))
 
 	return nil

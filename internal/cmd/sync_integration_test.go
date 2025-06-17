@@ -661,6 +661,22 @@ func (m *MockClient) InviteUserWithContext(ctx context.Context, email, policyID 
 	}
 }
 
+// DeleteInvite is a no-op for testing
+func (m *MockClient) DeleteInvite(email string) error {
+	// For testing purposes, just track the call (could extend MockAPICalls if needed)
+	return nil
+}
+
+// DeleteInviteWithContext is a no-op for testing with context support
+func (m *MockClient) DeleteInviteWithContext(ctx context.Context, email string) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+		return m.DeleteInvite(email)
+	}
+}
+
 // Helper functions for testing
 func NewSyncCommand(mockClient *MockClient) *cobra.Command {
 	// Create a test version of the sync command

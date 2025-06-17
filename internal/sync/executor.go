@@ -41,12 +41,12 @@ type ExecutorWithMembers struct {
 
 // ExecutionResult represents the result of executing a sync plan
 type ExecutionResult struct {
-	Created      int    // Number of roles created
-	Updated      int    // Number of roles updated
-	Deleted      int    // Number of roles deleted
-	Error        error  // Error if execution failed
-	DryRun       bool   // Whether this was a dry run
-	DetailedInfo string // Detailed information about changes (for enhanced dry-run)
+	Created         int              // Number of roles created
+	Updated         int              // Number of roles updated
+	Deleted         int              // Number of roles deleted
+	Error           error            // Error if execution failed
+	DryRun          bool             // Whether this was a dry run
+	DetailedInfo    string           // Detailed information about changes (for enhanced dry-run)
 	MemberDeletions *MemberDeletions // Members and invites that would be deleted
 }
 
@@ -436,7 +436,7 @@ func (e *ExecutorWithMembers) syncAllMembersFromPlan(plan SyncPlan) (*MemberDele
 
 	// Collect members from created and updated roles only
 	localMembers := make(map[string]string) // email -> roleName
-	
+
 	// Add members from created roles
 	for _, role := range plan.Creates {
 		for _, memberEmail := range role.Members {
@@ -487,7 +487,7 @@ func (e *ExecutorWithMembers) syncAllMembers(allLocalRoles []models.Role) (*Memb
 
 	// Collect all members from ALL local role definitions
 	localMembers := make(map[string]string) // email -> roleName
-	
+
 	// Add members from ALL local roles
 	for _, role := range allLocalRoles {
 		for _, memberEmail := range role.Members {
@@ -535,7 +535,7 @@ func (e *ExecutorWithMembers) processMemberAssignments(localMembers map[string]s
 		roleID := role.ID
 
 		existingMember, memberExists := existingMembers[memberEmail]
-		
+
 		if memberExists {
 			// Member exists - check if they're already assigned to the correct role
 			if existingMember.PolicyID == roleID {

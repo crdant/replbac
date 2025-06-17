@@ -726,7 +726,7 @@ func TestAssignMemberRole(t *testing.T) {
 					if r.Method != http.MethodGet {
 						t.Errorf("Expected GET request for members, got %s", r.Method)
 					}
-					
+
 					// Return team members - include test member only if not testing "member not found"
 					var membersResponse string
 					if tt.memberEmail == "nonexistent@example.com" {
@@ -746,25 +746,25 @@ func TestAssignMemberRole(t *testing.T) {
 					if _, err := w.Write([]byte(membersResponse)); err != nil {
 						t.Errorf("Failed to write members response: %v", err)
 					}
-					
+
 				case "/v1/team/member":
 					// Handle role assignment request
 					if r.Method != http.MethodPut {
 						t.Errorf("Expected PUT request for assignment, got %s", r.Method)
 					}
-					
+
 					// Verify Content-Type header
 					contentType := r.Header.Get("Content-Type")
 					if contentType != "application/json" {
 						t.Errorf("Expected Content-Type 'application/json', got '%s'", contentType)
 					}
-					
+
 					// Verify the request body contains the correct payload
 					body, err := io.ReadAll(r.Body)
 					if err != nil {
 						t.Errorf("Failed to read request body: %v", err)
 					}
-					
+
 					var payload struct {
 						PolicyID string `json:"policyId"`
 						ID       string `json:"id"`
@@ -772,7 +772,7 @@ func TestAssignMemberRole(t *testing.T) {
 					if err := json.Unmarshal(body, &payload); err != nil {
 						t.Errorf("Failed to unmarshal request body: %v", err)
 					}
-					
+
 					// Verify payload contents
 					if payload.PolicyID != tt.roleID {
 						t.Errorf("Expected policyId %s, got %s", tt.roleID, payload.PolicyID)
@@ -780,12 +780,12 @@ func TestAssignMemberRole(t *testing.T) {
 					if payload.ID != "user-id-123" {
 						t.Errorf("Expected id 'user-id-123', got %s", payload.ID)
 					}
-					
+
 					w.WriteHeader(tt.mockStatusCode)
 					if _, err := w.Write([]byte(tt.mockResponse)); err != nil {
 						t.Errorf("Failed to write assignment response: %v", err)
 					}
-					
+
 				default:
 					t.Errorf("Unexpected request path: %s", r.URL.Path)
 					w.WriteHeader(http.StatusNotFound)
@@ -1071,25 +1071,51 @@ func TestDeleteInvite(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				if r.Method != http.MethodDelete {
-					t.Errorf("Expected DELETE request, got %s", r.Method)
-				}
-
-				// Verify the URL path has the encoded email
-				expectedPath := "/vendor/v3/team/invite/"
-				if tt.email != "" {
-					encodedEmail := strings.ReplaceAll(tt.email, "@", "%40")
-					encodedEmail = strings.ReplaceAll(encodedEmail, "+", "%2B")
-					expectedPath += encodedEmail
-				}
-				
-				if tt.email != "" && r.URL.Path != expectedPath {
-					t.Errorf("Expected path %s, got %s", expectedPath, r.URL.Path)
-				}
-
-				w.WriteHeader(tt.mockStatusCode)
-				if _, err := w.Write([]byte(tt.mockResponse)); err != nil {
-					t.Errorf("Failed to write response: %v", err)
+				// Handle both team members fetching and invite deletion requests
+				switch r.URL.Path {
+				case "/v1/team/members":
+					// Return team members list for invite ID resolution
+					if r.Method != http.MethodGet {
+						t.Errorf("Expected GET request for members, got %s", r.Method)
+					}
+					
+					// Return team members - include pending invite only if not testing "empty email"
+					var membersResponse string
+					if tt.email == "" {
+						// Return empty members list for "empty email" test
+						membersResponse = `[]`
+					} else {
+						// Return team members including the pending invite
+						membersResponse = `[
+							{
+								"id": "` + tt.email + `",
+								"email": "` + tt.email + `",
+								"status": "pending",
+								"inviteId": "invite-123"
+							}
+						]`
+					}
+					w.WriteHeader(http.StatusOK)
+					if _, err := w.Write([]byte(membersResponse)); err != nil {
+						t.Errorf("Failed to write members response: %v", err)
+					}
+					
+				default:
+					// Handle invite deletion request
+					if r.Method != http.MethodDelete {
+						t.Errorf("Expected DELETE request for invite deletion, got %s", r.Method)
+					}
+					
+					// Verify the URL path matches the new invite deletion endpoint
+					expectedPath := "/vendor/v1/team/invite/" + tt.email
+					if tt.email != "" && r.URL.Path != expectedPath {
+						t.Errorf("Expected path %s, got %s", expectedPath, r.URL.Path)
+					}
+					
+					w.WriteHeader(tt.mockStatusCode)
+					if _, err := w.Write([]byte(tt.mockResponse)); err != nil {
+						t.Errorf("Failed to write invite deletion response: %v", err)
+					}
 				}
 			}))
 			defer server.Close()

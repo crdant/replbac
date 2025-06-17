@@ -35,17 +35,17 @@ func TestSyncCommandInviteFlags(t *testing.T) {
 				RunE: func(cmd *cobra.Command, args []string) error {
 					// Test the flag parsing logic
 					noInvite, _ := cmd.Flags().GetBool("no-invite")
-					
+
 					if noInvite != tt.expectedNoInvite {
 						t.Errorf("Expected no-invite %v, got %v", tt.expectedNoInvite, noInvite)
 					}
-					
+
 					// Test the logic that calculates effective invite setting
 					effectiveAutoInvite := !noInvite
 					if effectiveAutoInvite != tt.expectedEffectiveInvite {
 						t.Errorf("Expected effective auto-invite %v, got %v", tt.expectedEffectiveInvite, effectiveAutoInvite)
 					}
-					
+
 					return nil
 				},
 			}
@@ -66,7 +66,7 @@ func TestSyncCommandInviteFlags(t *testing.T) {
 func TestSyncCommandInviteFlagDescriptions(t *testing.T) {
 	// Test that the sync command has the invite flag with correct description
 	cmd := NewSyncCommandForTesting()
-	
+
 	noInviteFlag := cmd.Flags().Lookup("no-invite")
 	if noInviteFlag == nil {
 		t.Error("Expected --no-invite flag to exist")
