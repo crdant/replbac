@@ -7,6 +7,10 @@
 
 `replbac` is a command-line tool for synchronizing Role-Based Access Control (RBAC) configurations between local YAML files and the Replicated Vendor Portal API. Manage your Replicated team roles as code with version control and automated deployment.
 
+## ⚠️ Disclaimer
+
+**This is not an official Replicated product.** This tool is provided "AS IS" without any warranty or support from Replicated. While I work for Replicated and am happy to help, we can't offer support through our usual channels and I can't promise to meet any SLAs. Use at your own risk and ensure you understand the implications of managing team access control through this tool.
+
 ## 🌟 Features
 
 - **Bidirectional Synchronization**: Push local role definitions to the Replicated platform or pull down existing roles
@@ -231,10 +235,11 @@ replbac sync --diff
 #### Member Assignment Process
 
 1. **Role Sync**: First, role definitions are synchronized
-2. **Member Assignment**: New members are assigned to their roles
-3. **Member Cleanup**: Members removed from all roles are identified
-4. **Confirmation**: User is prompted to confirm member deletions
-5. **Deletion**: Confirmed orphaned members are removed from the team
+2. **Member Assignment**: Existing team members are assigned to their roles
+3. **Member Invitation**: Users not yet in the team are automatically invited
+4. **Member Cleanup**: Members removed from all roles are identified
+5. **Confirmation**: User is prompted to confirm member deletions
+6. **Deletion**: Confirmed orphaned members are removed from the team
 
 #### Member Deletion Confirmation
 
@@ -252,6 +257,20 @@ Use `--force` to skip confirmation prompts in automated environments:
 ```bash
 replbac sync --force
 ```
+
+#### Invitation Control
+
+By default, `replbac` automatically invites users who are listed in role files but don't exist in the team yet. You can control this behavior:
+
+```bash
+# Default behavior - automatically invite missing users
+replbac sync
+
+# Disable automatic invitations
+replbac sync --no-invite
+```
+
+When `--no-invite` is used, users not found in the team will be logged as warnings but no invitations will be sent.
 
 ### Show Version Information
 
@@ -276,6 +295,7 @@ replbac version
 | `--diff` | Show detailed differences (implies --dry-run) |
 | `--delete` | Delete remote roles not present in local files |
 | `--force` | Skip confirmation prompts (requires --delete) |
+| `--no-invite` | Disable automatic invitation of missing members |
 | `--verbose` | Enable info-level logging |
 | `--debug` | Enable debug-level logging |
 
