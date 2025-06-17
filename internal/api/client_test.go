@@ -1078,7 +1078,7 @@ func TestDeleteInvite(t *testing.T) {
 					if r.Method != http.MethodGet {
 						t.Errorf("Expected GET request for members, got %s", r.Method)
 					}
-					
+
 					// Return team members - include pending invite only if not testing "empty email"
 					var membersResponse string
 					if tt.email == "" {
@@ -1099,19 +1099,19 @@ func TestDeleteInvite(t *testing.T) {
 					if _, err := w.Write([]byte(membersResponse)); err != nil {
 						t.Errorf("Failed to write members response: %v", err)
 					}
-					
+
 				default:
 					// Handle invite deletion request
 					if r.Method != http.MethodDelete {
 						t.Errorf("Expected DELETE request for invite deletion, got %s", r.Method)
 					}
-					
+
 					// Verify the URL path matches the new invite deletion endpoint
 					expectedPath := "/vendor/v1/team/invite/" + tt.email
 					if tt.email != "" && r.URL.Path != expectedPath {
 						t.Errorf("Expected path %s, got %s", expectedPath, r.URL.Path)
 					}
-					
+
 					w.WriteHeader(tt.mockStatusCode)
 					if _, err := w.Write([]byte(tt.mockResponse)); err != nil {
 						t.Errorf("Failed to write invite deletion response: %v", err)
