@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -718,17 +719,76 @@ func TestAssignMemberRole(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				if r.Method != http.MethodPut {
-					t.Errorf("Expected PUT request, got %s", r.Method)
-				}
-				expectedPath := "/vendor/v3/team/member/" + tt.memberEmail + "/role/" + tt.roleID
-				if r.URL.Path != expectedPath {
-					t.Errorf("Expected path %s, got %s", expectedPath, r.URL.Path)
-				}
+				// Handle both member fetching and role assignment requests
+				switch r.URL.Path {
+				case "/v1/team/members":
+					// Return team members list for member ID resolution
+					if r.Method != http.MethodGet {
+						t.Errorf("Expected GET request for members, got %s", r.Method)
+					}
 
-				w.WriteHeader(tt.mockStatusCode)
-				if _, err := w.Write([]byte(tt.mockResponse)); err != nil {
-					t.Errorf("Failed to write response: %v", err)
+					// Return team members - include test member only if not testing "member not found"
+					var membersResponse string
+					if tt.memberEmail == "nonexistent@example.com" {
+						// Return empty members list for "member not found" test
+						membersResponse = `[]`
+					} else {
+						// Return team members including the test member
+						membersResponse = `[
+							{
+								"id": "user-id-123",
+								"email": "john@example.com",
+								"name": "John Doe"
+							}
+						]`
+					}
+					w.WriteHeader(http.StatusOK)
+					if _, err := w.Write([]byte(membersResponse)); err != nil {
+						t.Errorf("Failed to write members response: %v", err)
+					}
+
+				case "/v1/team/member":
+					// Handle role assignment request
+					if r.Method != http.MethodPut {
+						t.Errorf("Expected PUT request for assignment, got %s", r.Method)
+					}
+
+					// Verify Content-Type header
+					contentType := r.Header.Get("Content-Type")
+					if contentType != "application/json" {
+						t.Errorf("Expected Content-Type 'application/json', got '%s'", contentType)
+					}
+
+					// Verify the request body contains the correct payload
+					body, err := io.ReadAll(r.Body)
+					if err != nil {
+						t.Errorf("Failed to read request body: %v", err)
+					}
+
+					var payload struct {
+						PolicyID string `json:"policyId"`
+						ID       string `json:"id"`
+					}
+					if err := json.Unmarshal(body, &payload); err != nil {
+						t.Errorf("Failed to unmarshal request body: %v", err)
+					}
+
+					// Verify payload contents
+					if payload.PolicyID != tt.roleID {
+						t.Errorf("Expected policyId %s, got %s", tt.roleID, payload.PolicyID)
+					}
+					if payload.ID != "user-id-123" {
+						t.Errorf("Expected id 'user-id-123', got %s", payload.ID)
+					}
+
+					w.WriteHeader(tt.mockStatusCode)
+					if _, err := w.Write([]byte(tt.mockResponse)); err != nil {
+						t.Errorf("Failed to write assignment response: %v", err)
+					}
+
+				default:
+					t.Errorf("Unexpected request path: %s", r.URL.Path)
+					w.WriteHeader(http.StatusNotFound)
 				}
 			}))
 			defer server.Close()
@@ -776,6 +836,19 @@ func TestInviteUser(t *testing.T) {
 				Email:    "test@example.com",
 				PolicyID: "policy123",
 				Status:   "pending",
+			},
+		},
+		{
+			name:           "successful invite with 204 No Content",
+			email:          "test@example.com",
+			policyID:       "policy123",
+			mockStatusCode: http.StatusNoContent,
+			mockResponse:   "",
+			expectError:    false,
+			expectedResp: &models.InviteUserResponse{
+				Email:    "test@example.com",
+				PolicyID: "policy123",
+				Status:   "invited",
 			},
 		},
 		{
@@ -935,6 +1008,124 @@ func TestInviteUserWithContext(t *testing.T) {
 			defer cancel()
 
 			_, err = client.InviteUserWithContext(ctx, tt.email, tt.policyID)
+
+			if tt.expectError {
+				if err == nil {
+					t.Errorf("Expected error but got none")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("Unexpected error: %v", err)
+			}
+		})
+	}
+}
+
+func TestDeleteInvite(t *testing.T) {
+	tests := []struct {
+		name           string
+		email          string
+		mockStatusCode int
+		mockResponse   string
+		expectError    bool
+	}{
+		{
+			name:           "successful invite deletion",
+			email:          "test@example.com",
+			mockStatusCode: http.StatusOK,
+			mockResponse:   `{"message": "Invitation deleted"}`,
+			expectError:    false,
+		},
+		{
+			name:           "successful invite deletion with 204 No Content",
+			email:          "test@example.com",
+			mockStatusCode: http.StatusNoContent,
+			mockResponse:   "",
+			expectError:    false,
+		},
+		{
+			name:           "invite not found (404) - should not error",
+			email:          "notfound@example.com",
+			mockStatusCode: http.StatusNotFound,
+			mockResponse:   `{"error": "invite not found"}`,
+			expectError:    false,
+		},
+		{
+			name:           "server error",
+			email:          "test@example.com",
+			mockStatusCode: http.StatusInternalServerError,
+			mockResponse:   `{"error": "internal server error"}`,
+			expectError:    true,
+		},
+		{
+			name:           "empty email",
+			email:          "",
+			mockStatusCode: http.StatusOK,
+			mockResponse:   "",
+			expectError:    true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				// Handle both team members fetching and invite deletion requests
+				switch r.URL.Path {
+				case "/v1/team/members":
+					// Return team members list for invite ID resolution
+					if r.Method != http.MethodGet {
+						t.Errorf("Expected GET request for members, got %s", r.Method)
+					}
+
+					// Return team members - include pending invite only if not testing "empty email"
+					var membersResponse string
+					if tt.email == "" {
+						// Return empty members list for "empty email" test
+						membersResponse = `[]`
+					} else {
+						// Return team members including the pending invite
+						membersResponse = `[
+							{
+								"id": "` + tt.email + `",
+								"email": "` + tt.email + `",
+								"status": "pending",
+								"inviteId": "invite-123"
+							}
+						]`
+					}
+					w.WriteHeader(http.StatusOK)
+					if _, err := w.Write([]byte(membersResponse)); err != nil {
+						t.Errorf("Failed to write members response: %v", err)
+					}
+
+				default:
+					// Handle invite deletion request
+					if r.Method != http.MethodDelete {
+						t.Errorf("Expected DELETE request for invite deletion, got %s", r.Method)
+					}
+
+					// Verify the URL path matches the new invite deletion endpoint
+					expectedPath := "/vendor/v1/team/invite/" + tt.email
+					if tt.email != "" && r.URL.Path != expectedPath {
+						t.Errorf("Expected path %s, got %s", expectedPath, r.URL.Path)
+					}
+
+					w.WriteHeader(tt.mockStatusCode)
+					if _, err := w.Write([]byte(tt.mockResponse)); err != nil {
+						t.Errorf("Failed to write invite deletion response: %v", err)
+					}
+				}
+			}))
+			defer server.Close()
+
+			client, err := NewClient(server.URL, "test-token", createTestLogger())
+			if err != nil {
+				t.Fatalf("Failed to create client: %v", err)
+			}
+
+			err = client.DeleteInvite(tt.email)
 
 			if tt.expectError {
 				if err == nil {

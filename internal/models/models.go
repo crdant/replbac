@@ -76,6 +76,24 @@ type TeamMember struct {
 	PolicyID     string `json:"policyId,omitempty"`
 	CreatedAt    string `json:"createdAt,omitempty"`
 	LastActiveAt string `json:"lastActiveAt,omitempty"`
+	Status       string `json:"status,omitempty"`   // "active", "pending", etc.
+	InviteID     string `json:"inviteId,omitempty"` // Present for pending invites
+}
+
+// IsPendingInvite returns true if this team member is actually a pending invite
+func (tm TeamMember) IsPendingInvite() bool {
+	// Check explicit pending status fields
+	if tm.Status == "pending" || tm.InviteID != "" {
+		return true
+	}
+
+	// Heuristic: if the member ID equals the email address, it's likely a pending invite
+	// This handles cases where the API doesn't set explicit pending status fields
+	if tm.ID == tm.Email {
+		return true
+	}
+
+	return false
 }
 
 // InviteUserRequest represents the request payload for inviting a user

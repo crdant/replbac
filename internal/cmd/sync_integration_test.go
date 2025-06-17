@@ -417,7 +417,7 @@ func TestSyncCommandConfiguration(t *testing.T) {
 						config := models.Config{
 							APIToken: "", // Empty token for this test
 						}
-						return RunSyncCommand(cmd, args, config, false, false, false, false)
+						return RunSyncCommand(cmd, args, config, false, false, false, false, true)
 					},
 				}
 				// Add the same flags as NewSyncCommand
@@ -658,6 +658,22 @@ func (m *MockClient) InviteUserWithContext(ctx context.Context, email, policyID 
 		return nil, ctx.Err()
 	default:
 		return m.InviteUser(email, policyID)
+	}
+}
+
+// DeleteInvite is a no-op for testing
+func (m *MockClient) DeleteInvite(email string) error {
+	// For testing purposes, just track the call (could extend MockAPICalls if needed)
+	return nil
+}
+
+// DeleteInviteWithContext is a no-op for testing with context support
+func (m *MockClient) DeleteInviteWithContext(ctx context.Context, email string) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+		return m.DeleteInvite(email)
 	}
 }
 

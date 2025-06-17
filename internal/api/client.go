@@ -34,6 +34,8 @@ type ClientInterface interface {
 	AssignMemberRoleWithContext(ctx context.Context, memberEmail, roleID string) error
 	InviteUser(email, policyID string) (*models.InviteUserResponse, error)
 	InviteUserWithContext(ctx context.Context, email, policyID string) (*models.InviteUserResponse, error)
+	DeleteInvite(email string) error
+	DeleteInviteWithContext(ctx context.Context, email string) error
 }
 
 // Client represents an HTTP client for the Replicated API
@@ -656,8 +658,8 @@ func (c *Client) GetTeamMembersWithContext(ctx context.Context) ([]models.TeamMe
 		c.logger.Debug("GetTeamMembers completed in %v", time.Since(start))
 	}()
 
-	url := c.baseURL + "/v1/team/members"
-	c.logger.Debug("fetching team members from endpoint: %s", url)
+	url := c.baseURL + "/v1/team/members?includeInvites=true"
+	c.logger.Debug("fetching team members (including pending invites) from endpoint: %s", url)
 
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
@@ -717,21 +719,61 @@ func (c *Client) AssignMemberRoleWithContext(ctx context.Context, memberEmail, r
 		c.logger.Error("member email is required for role assignment")
 		return fmt.Errorf("member email is required")
 	}
+	// Allow empty role ID for member removal
 	if strings.TrimSpace(roleID) == "" {
-		c.logger.Error("role ID is required for role assignment")
-		return fmt.Errorf("role ID is required")
+		c.logger.Debug("empty role ID provided - attempting to remove member from team")
+		return c.removeMemberFromTeam(ctx, memberEmail)
 	}
 
-	url := c.baseURL + "/vendor/v3/team/member/" + memberEmail + "/role/" + roleID
+	// First, get the member ID from the email by fetching team members
+	c.logger.Debug("fetching team members to resolve member ID for email: %s", memberEmail)
+	members, err := c.GetTeamMembersWithContext(ctx)
+	if err != nil {
+		c.logger.Error("failed to get team members: %v", err)
+		return fmt.Errorf("failed to get team members: %w", err)
+	}
+
+	// Find the member ID for the given email
+	var memberID string
+	for _, member := range members {
+		if member.Email == memberEmail {
+			memberID = member.ID
+			break
+		}
+	}
+
+	if memberID == "" {
+		c.logger.Error("member with email '%s' not found in team", memberEmail)
+		return fmt.Errorf("member with email '%s' not found in team", memberEmail)
+	}
+
+	c.logger.Debug("found member ID '%s' for email '%s'", memberID, memberEmail)
+	url := c.baseURL + "/v1/team/member"
 	c.logger.Debug("assigning role at endpoint: %s", url)
 
-	req, err := http.NewRequest(http.MethodPut, url, nil)
+	// Create the assignment payload
+	assignmentPayload := struct {
+		PolicyID string `json:"policyId"`
+		ID       string `json:"id"`
+	}{
+		PolicyID: roleID,
+		ID:       memberID,
+	}
+
+	body, err := json.Marshal(assignmentPayload)
+	if err != nil {
+		c.logger.Error("failed to marshal assignment payload: %v", err)
+		return fmt.Errorf("failed to marshal assignment payload: %w", err)
+	}
+
+	req, err := http.NewRequest(http.MethodPut, url, bytes.NewBuffer(body))
 	if err != nil {
 		c.logger.Error("failed to create HTTP request for %s: %v", url, err)
 		return fmt.Errorf("failed to create request: %w", err)
 	}
 
 	req.Header.Set("Authorization", c.apiToken)
+	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 
 	resp, err := c.executeWithRetry(ctx, req)
@@ -742,7 +784,7 @@ func (c *Client) AssignMemberRoleWithContext(ctx context.Context, memberEmail, r
 	defer func() { _ = resp.Body.Close() }()
 
 	c.logger.Debug("received HTTP response for role assignment: status=%d", resp.StatusCode)
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusNoContent {
 		c.logger.Error("failed to assign role '%s' to member '%s': API returned status %d", roleID, memberEmail, resp.StatusCode)
 		return c.handleErrorResponse(resp)
 	}
@@ -815,12 +857,22 @@ func (c *Client) InviteUserWithContext(ctx context.Context, email, policyID stri
 		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}
 
-	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
 		c.logger.Error("failed to invite user '%s': API returned status %d", email, resp.StatusCode)
 		return nil, c.handleErrorResponse(resp)
 	}
 
-	// Parse response
+	// Handle 204 No Content response (successful invite with no body)
+	if resp.StatusCode == http.StatusNoContent {
+		c.logger.Info("successfully invited user '%s' with policy '%s' (no response body)", email, policyID)
+		return &models.InviteUserResponse{
+			Email:    email,
+			PolicyID: policyID,
+			Status:   "invited",
+		}, nil
+	}
+
+	// Parse response for 200/201 status codes
 	var inviteResp models.InviteUserResponse
 	if err := json.Unmarshal(body, &inviteResp); err != nil {
 		c.logger.Error("failed to parse invite response for user '%s': %v", email, err)
@@ -829,4 +881,147 @@ func (c *Client) InviteUserWithContext(ctx context.Context, email, policyID stri
 
 	c.logger.Info("successfully invited user '%s' with policy '%s'", email, policyID)
 	return &inviteResp, nil
+}
+
+// DeleteInvite deletes a pending invitation for a user
+func (c *Client) DeleteInvite(email string) error {
+	return c.DeleteInviteWithContext(context.Background(), email)
+}
+
+// DeleteInviteWithContext deletes a pending invitation for a user with context support
+func (c *Client) DeleteInviteWithContext(ctx context.Context, email string) error {
+	c.logger.Info("deleting invitation for user '%s' via API", email)
+	start := time.Now()
+	defer func() {
+		c.logger.Debug("DeleteInvite for '%s' completed in %v", email, time.Since(start))
+	}()
+
+	// Validate input parameters
+	if strings.TrimSpace(email) == "" {
+		c.logger.Error("email is required for deleting invitation")
+		return fmt.Errorf("email is required")
+	}
+
+	// First, get the invite ID from the email by fetching team members
+	c.logger.Debug("fetching team members to resolve invite ID for email: %s", email)
+	members, err := c.GetTeamMembersWithContext(ctx)
+	if err != nil {
+		c.logger.Error("failed to get team members: %v", err)
+		return fmt.Errorf("failed to get team members: %w", err)
+	}
+
+	// Find the invite ID for the given email
+	var inviteID string
+	for _, member := range members {
+		if member.Email == email && member.IsPendingInvite() {
+			inviteID = member.ID
+			break
+		}
+	}
+
+	if inviteID == "" {
+		c.logger.Error("pending invite with email '%s' not found", email)
+		return fmt.Errorf("pending invite with email '%s' not found", email)
+	}
+
+	c.logger.Debug("found invite ID '%s' for email '%s'", inviteID, email)
+	url := c.baseURL + "/vendor/v1/team/invite/" + inviteID
+	c.logger.Debug("deleting invitation at endpoint: %s", url)
+
+	req, err := http.NewRequest(http.MethodDelete, url, nil)
+	if err != nil {
+		c.logger.Error("failed to create HTTP request for deleting invitation '%s': %v", email, err)
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Authorization", c.apiToken)
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := c.executeWithRetry(ctx, req)
+	if err != nil {
+		c.logger.Error("HTTP request failed for deleting invitation '%s': %v", email, err)
+		return fmt.Errorf("failed to execute request: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	c.logger.Debug("received HTTP response for deleting invitation '%s': status=%d", email, resp.StatusCode)
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusNotFound {
+		c.logger.Error("failed to delete invitation for '%s': API returned status %d", email, resp.StatusCode)
+		return c.handleErrorResponse(resp)
+	}
+
+	// If 404, the invite doesn't exist (which is fine - maybe it was already deleted or accepted)
+	if resp.StatusCode == http.StatusNotFound {
+		c.logger.Debug("invitation for '%s' not found (may have been already deleted or accepted)", email)
+	}
+
+	c.logger.Info("successfully deleted invitation for user '%s'", email)
+	return nil
+}
+
+// removeMemberFromTeam removes a member from the team by finding their member ID and making a DELETE request
+func (c *Client) removeMemberFromTeam(ctx context.Context, memberEmail string) error {
+	c.logger.Info("removing member '%s' from team via API", memberEmail)
+	start := time.Now()
+	defer func() {
+		c.logger.Debug("removeMemberFromTeam for '%s' completed in %v", memberEmail, time.Since(start))
+	}()
+
+	// First, get the member ID from the email by fetching team members
+	c.logger.Debug("fetching team members to resolve member ID for email: %s", memberEmail)
+	members, err := c.GetTeamMembersWithContext(ctx)
+	if err != nil {
+		c.logger.Error("failed to get team members: %v", err)
+		return fmt.Errorf("failed to get team members: %w", err)
+	}
+
+	// Find the member ID for the given email
+	var memberID string
+	for _, member := range members {
+		if member.Email == memberEmail {
+			memberID = member.ID
+			break
+		}
+	}
+
+	if memberID == "" {
+		c.logger.Error("member with email '%s' not found in team", memberEmail)
+		return fmt.Errorf("member with email '%s' not found in team", memberEmail)
+	}
+
+	c.logger.Debug("found member ID '%s' for email '%s'", memberID, memberEmail)
+	url := c.baseURL + "/v1/team/member?id=" + memberID
+	c.logger.Debug("removing member at endpoint: %s", url)
+
+	req, err := http.NewRequest(http.MethodDelete, url, nil)
+	if err != nil {
+		c.logger.Error("failed to create HTTP request for removing member '%s': %v", memberEmail, err)
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Authorization", c.apiToken)
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := c.executeWithRetry(ctx, req)
+	if err != nil {
+		c.logger.Error("HTTP request failed for removing member '%s': %v", memberEmail, err)
+		return fmt.Errorf("failed to execute request: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	c.logger.Debug("received HTTP response for removing member '%s': status=%d", memberEmail, resp.StatusCode)
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusNotFound {
+		c.logger.Error("failed to remove member '%s': API returned status %d", memberEmail, resp.StatusCode)
+		return c.handleErrorResponse(resp)
+	}
+
+	// If 404, the member doesn't exist (which is fine - maybe they were already removed)
+	if resp.StatusCode == http.StatusNotFound {
+		c.logger.Debug("member '%s' not found (may have been already removed)", memberEmail)
+	}
+
+	c.logger.Info("successfully removed member '%s' from team", memberEmail)
+	return nil
 }

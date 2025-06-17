@@ -659,6 +659,22 @@ func (m *WorkflowMockClient) InviteUserWithContext(ctx context.Context, email, p
 	}
 }
 
+// DeleteInvite is a no-op for testing
+func (m *WorkflowMockClient) DeleteInvite(email string) error {
+	// For testing purposes, just track the call (could extend WorkflowAPICalls if needed)
+	return nil
+}
+
+// DeleteInviteWithContext is a no-op for testing with context support
+func (m *WorkflowMockClient) DeleteInviteWithContext(ctx context.Context, email string) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+		return m.DeleteInvite(email)
+	}
+}
+
 func NewWorkflowSyncCommand(mockClient *WorkflowMockClient) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "sync [directory]",
