@@ -284,7 +284,7 @@ func RunSyncCommandWithLogging(cmd *cobra.Command, args []string, client api.Cli
 					result = executor.ExecutePlanDryRun(plan)
 				}
 			} else {
-				result = executor.ExecutePlan(plan)
+				result = executor.ExecutePlanWithLocalRoles(plan, localRoles)
 			}
 		} else {
 			logger.Debug("roles contain no members - using standard Executor")
@@ -310,6 +310,13 @@ func RunSyncCommandWithLogging(cmd *cobra.Command, args []string, client api.Cli
 			Partial:   true,
 		}
 		return HandleSyncError(cmd, syncErr)
+	}
+
+	// Handle member deletions if needed
+	if !dryRun && result.MemberDeletions != nil && (len(result.MemberDeletions.OrphanedUsers) > 0 || len(result.MemberDeletions.OrphanedInvites) > 0) {
+		if err := confirmAndDeleteMembers(cmd, client, result.MemberDeletions, force, logger); err != nil {
+			return fmt.Errorf("failed to handle member deletions: %w", err)
+		}
 	}
 
 	// Display execution summary
@@ -453,7 +460,7 @@ func RunSyncCommandWithClientAndInvite(cmd *cobra.Command, args []string, client
 		if dryRun {
 			result = executor.ExecutePlanDryRun(plan)
 		} else {
-			result = executor.ExecutePlan(plan)
+			result = executor.ExecutePlanWithLocalRoles(plan, localRoles)
 		}
 	} else {
 		logger.Debug("roles contain no members - using standard Executor")
@@ -476,6 +483,13 @@ func RunSyncCommandWithClientAndInvite(cmd *cobra.Command, args []string, client
 		return HandleSyncError(cmd, syncErr)
 	}
 
+	// Handle member deletions if needed
+	if !dryRun && result.MemberDeletions != nil && (len(result.MemberDeletions.OrphanedUsers) > 0 || len(result.MemberDeletions.OrphanedInvites) > 0) {
+		if err := confirmAndDeleteMembers(cmd, client, result.MemberDeletions, force, logger); err != nil {
+			return fmt.Errorf("failed to handle member deletions: %w", err)
+		}
+	}
+
 	// Display execution summary
 	cmd.Printf("\nSync completed: %s\n", result.Summary())
 
@@ -490,4 +504,59 @@ func rolesHaveMembers(roles []models.Role) bool {
 		}
 	}
 	return false
+}
+
+// confirmAndDeleteMembers prompts for confirmation and deletes orphaned members/invites
+func confirmAndDeleteMembers(cmd *cobra.Command, client api.ClientInterface, deletions *sync.MemberDeletions, force bool, logger *logging.Logger) error {
+	totalDeletions := len(deletions.OrphanedUsers) + len(deletions.OrphanedInvites)
+	
+	// Show what will be deleted
+	if len(deletions.OrphanedUsers) > 0 {
+		cmd.Printf("\nThis operation will permanently remove %d team member(s) from the API:\n", len(deletions.OrphanedUsers))
+		for _, email := range deletions.OrphanedUsers {
+			cmd.Printf("  - %s\n", email)
+		}
+	}
+	
+	if len(deletions.OrphanedInvites) > 0 {
+		cmd.Printf("\nThis operation will cancel %d pending invitation(s):\n", len(deletions.OrphanedInvites))
+		for _, email := range deletions.OrphanedInvites {
+			cmd.Printf("  - %s\n", email)
+		}
+	}
+
+	// Ask for confirmation if not forced
+	if !force {
+		cmd.Printf("\nDo you want to continue with these %d deletion(s)? (y/N): ", totalDeletions)
+
+		reader := bufio.NewReader(os.Stdin)
+		response, err := reader.ReadString('\n')
+		if err != nil {
+			return fmt.Errorf("failed to read confirmation: %w", err)
+		}
+
+		response = strings.ToLower(strings.TrimSpace(response))
+		if response != "y" && response != "yes" {
+			cmd.Println("Member deletion cancelled by user")
+			logger.Debug("member deletion operation cancelled by user")
+			return nil
+		}
+		logger.Debug("user confirmed member deletion operation")
+	}
+
+	// Perform the deletions
+	memberClient, ok := client.(sync.APIClientWithMembers)
+	if !ok {
+		return fmt.Errorf("client does not support member operations")
+	}
+
+	executor := sync.NewExecutorWithMembersAndInvite(memberClient, logger, true)
+	if err := executor.DeleteMembersAndInvites(deletions); err != nil {
+		return fmt.Errorf("failed to delete members and invites: %w", err)
+	}
+
+	cmd.Printf("Successfully removed %d member(s) and cancelled %d invitation(s)\n", 
+		len(deletions.OrphanedUsers), len(deletions.OrphanedInvites))
+
+	return nil
 }

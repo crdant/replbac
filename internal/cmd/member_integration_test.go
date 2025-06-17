@@ -39,7 +39,7 @@ func TestSyncCommandWithMembers(t *testing.T) {
 			remoteRoles:   []models.Role{},
 			expectMembers: true,
 			expectedCalls: map[string][]string{
-				"admin": {"john@example.com", "jane@example.com"},
+				"mock-id-admin": {"john@example.com", "jane@example.com"},
 			},
 		},
 		{
@@ -81,7 +81,7 @@ func TestSyncCommandWithMembers(t *testing.T) {
 			remoteRoles:   []models.Role{},
 			expectMembers: true,
 			expectedCalls: map[string][]string{
-				"admin": {"admin@example.com"},
+				"mock-id-admin": {"admin@example.com"},
 			},
 		},
 	}
@@ -224,6 +224,10 @@ func (m *MockAPIClientWithMemberTracking) GetRolesWithContext(ctx context.Contex
 func (m *MockAPIClientWithMemberTracking) GetRole(roleName string) (models.Role, error) {
 	for _, role := range m.roles {
 		if role.Name == roleName {
+			// Ensure role has an ID for member assignments
+			if role.ID == "" {
+				role.ID = "mock-id-" + roleName
+			}
 			return role, nil
 		}
 	}
@@ -318,6 +322,21 @@ func (m *MockAPIClientWithMemberTracking) InviteUserWithContext(ctx context.Cont
 		return nil, ctx.Err()
 	default:
 		return m.InviteUser(email, policyID)
+	}
+}
+
+// DeleteInvite is a no-op for testing
+func (m *MockAPIClientWithMemberTracking) DeleteInvite(email string) error {
+	return nil
+}
+
+// DeleteInviteWithContext is a no-op for testing with context support
+func (m *MockAPIClientWithMemberTracking) DeleteInviteWithContext(ctx context.Context, email string) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+		return m.DeleteInvite(email)
 	}
 }
 
